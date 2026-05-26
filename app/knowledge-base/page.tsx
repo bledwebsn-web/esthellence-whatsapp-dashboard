@@ -1,6 +1,7 @@
 import KnowledgeBaseForm, {
   KnowledgeBaseItemAction,
 } from "@/components/KnowledgeBaseForm";
+import KnowledgeBaseImportForm from "@/components/KnowledgeBaseImportForm";
 
 type KnowledgeBaseItem = {
   id: string;
@@ -55,6 +56,10 @@ export default async function KnowledgeBasePage() {
 
         <div className="mb-8">
           <KnowledgeBaseForm />
+        </div>
+
+        <div className="mb-8">
+          <KnowledgeBaseImportForm />
         </div>
 
         <div className="grid gap-4">
