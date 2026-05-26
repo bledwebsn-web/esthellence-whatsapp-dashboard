@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AiSummaryBox from "@/components/AiSummaryBox";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
 
@@ -132,13 +133,11 @@ export default async function ConversationDetailPage({
                     {conversation.urgency_level ?? "normal"}
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 sm:col-span-2">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Resume IA
-                  </div>
-                  <div className="mt-2 text-sm leading-6 text-slate-200">
-                    {conversation.ai_summary ?? "Aucun resume IA pour le moment."}
-                  </div>
+                <div className="sm:col-span-2">
+                  <AiSummaryBox
+                    conversationId={conversation.id}
+                    initialSummary={conversation.ai_summary}
+                  />
                 </div>
               </div>
             </div>
