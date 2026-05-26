@@ -5,102 +5,95 @@ type SummarizeConversationBody = {
   conversation_id?: string;
 };
 
-function normalizeText(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function buildStructuredSummary(candidate: Record<string, unknown>): string {
+  const need =
+    candidate["besoin principal"] ??
+    candidate["besoin_principal"] ??
+    candidate["besoin"] ??
+    candidate["main_need"];
+
+  const info =
+    candidate["informations déjà données"] ??
+    candidate["informations deja donnees"] ??
+    candidate["infos données"] ??
+    candidate["infos donnees"] ??
+    candidate["informations"] ??
+    candidate["given_information"];
+
+  const interest =
+    candidate["niveau d'intérêt"] ??
+    candidate["niveau d’interet"] ??
+    candidate["niveau d'interet"] ??
+    candidate["niveau_interet"] ??
+    candidate["interest_level"];
+
+  const questions =
+    candidate["objections ou questions restantes"] ??
+    candidate["objections"] ??
+    candidate["questions restantes"] ??
+    candidate["remaining_questions"];
+
+  const nextAction =
+    candidate["prochaine action recommandée"] ??
+    candidate["prochaine action recommandee"] ??
+    candidate["prochaine_action"] ??
+    candidate["next_action"];
+
+  const lines: string[] = [];
+
+  if (typeof need === "string" && need.trim()) {
+    lines.push(`Besoin : ${need.trim()}`);
+  }
+
+  if (typeof info === "string" && info.trim()) {
+    lines.push(`Infos données : ${info.trim()}`);
+  }
+
+  if (typeof interest === "string" && interest.trim()) {
+    lines.push(`Niveau d’intérêt : ${interest.trim()}`);
+  }
+
+  if (typeof questions === "string" && questions.trim()) {
+    lines.push(`Questions restantes : ${questions.trim()}`);
+  }
+
+  if (typeof nextAction === "string" && nextAction.trim()) {
+    lines.push(`Prochaine action : ${nextAction.trim()}`);
+  }
+
+  return lines.join("\n");
 }
 
 function normalizeSummary(raw: unknown): string {
   const fallback = "Résumé indisponible. Relecture humaine recommandée.";
-
-  function buildStructuredSummary(candidate: Record<string, unknown>) {
-    const normalized = new Map<string, unknown>();
-
-    for (const [key, value] of Object.entries(candidate)) {
-      normalized.set(normalizeText(key), value);
-    }
-
-    const need = normalized.get("besoin principal");
-    const info =
-      normalized.get("informations deja donnees") ??
-      normalized.get("informations deja donnéees") ??
-      normalized.get("informations deja données");
-    const interest =
-      normalized.get("niveau d'interet") ?? normalized.get("niveau dinteret");
-    const questions =
-      normalized.get("objections ou questions restantes") ??
-      normalized.get("objections ou questions restante");
-    const nextAction =
-      normalized.get("prochaine action recommandee") ??
-      normalized.get("prochaine action recommandée");
-
-    const lines: string[] = [];
-
-    if (typeof need === "string" && need.trim()) {
-      lines.push(`Besoin : ${need.trim()}.`);
-    }
-
-    if (typeof info === "string" && info.trim()) {
-      lines.push(`Infos données : ${info.trim()}.`);
-    }
-
-    if (typeof interest === "string" && interest.trim()) {
-      lines.push(`Niveau d’intérêt : ${interest.trim()}.`);
-    }
-
-    if (typeof questions === "string" && questions.trim()) {
-      lines.push(`Questions restantes : ${questions.trim()}.`);
-    }
-
-    if (typeof nextAction === "string" && nextAction.trim()) {
-      lines.push(`Prochaine action : ${nextAction.trim()}.`);
-    }
-
-    return lines.join("\n") || fallback;
-  }
 
   if (typeof raw === "string") {
     const trimmed = raw.trim();
 
     try {
       const parsed = JSON.parse(trimmed);
-
-      if (typeof parsed === "string") {
-        return parsed.trim() || fallback;
-      }
-
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        "summary" in parsed &&
-        typeof (parsed as { summary?: unknown }).summary === "string"
-      ) {
-        return (parsed as { summary: string }).summary.trim() || fallback;
-      }
-
-      if (parsed && typeof parsed === "object") {
-        return buildStructuredSummary(parsed as Record<string, unknown>);
+      return normalizeSummary(parsed);
+    } catch {
+      if (trimmed && trimmed !== "[object Object]") {
+        return trimmed;
       }
 
       return fallback;
-    } catch {
-      return trimmed || fallback;
     }
   }
 
-  if (
-    raw &&
-    typeof raw === "object" &&
-    "summary" in raw &&
-    typeof (raw as { summary?: unknown }).summary === "string"
-  ) {
-    return (raw as { summary: string }).summary.trim() || fallback;
-  }
-
   if (raw && typeof raw === "object") {
-    return buildStructuredSummary(raw as Record<string, unknown>);
+    const candidate = raw as Record<string, unknown>;
+
+    if (typeof candidate.summary === "string" && candidate.summary.trim()) {
+      return candidate.summary.trim();
+    }
+
+    const structured = buildStructuredSummary(candidate);
+
+    if (structured.trim()) {
+      return structured.trim();
+    }
   }
 
   return fallback;
@@ -232,14 +225,9 @@ export async function POST(request: Request) {
 
     console.log("Groq summary raw:", raw);
 
-    let summaryText = normalizeSummary(raw);
-    summaryText = clampToFiveLines(summaryText).trim();
+    let summaryText = clampToFiveLines(normalizeSummary(raw)).trim();
 
-    if (summaryText === "[object Object]") {
-      summaryText = "Résumé indisponible. Relecture humaine recommandée.";
-    }
-
-    if (!summaryText) {
+    if (!summaryText || summaryText === "[object Object]") {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
     }
 
