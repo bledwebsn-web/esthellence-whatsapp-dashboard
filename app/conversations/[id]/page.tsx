@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ManualReplyForm from "@/components/ManualReplyForm";
 
 type ConversationMessage = {
   id: string;
@@ -160,19 +161,7 @@ export default async function ConversationDetailPage({
                 )}
               </div>
 
-              <div className="mt-8 rounded-2xl border border-dashed border-white/10 bg-white/5 p-4">
-                <textarea
-                  disabled
-                  placeholder="Reponse manuelle bientot disponible"
-                  className="min-h-28 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-300 placeholder:text-slate-500 focus:outline-none"
-                />
-                <button
-                  disabled
-                  className="mt-3 inline-flex items-center rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-slate-400 opacity-60"
-                >
-                  Envoyer
-                </button>
-              </div>
+              <ManualReplyForm conversationId={conversation.id} />
             </div>
           </div>
         </section>
