@@ -5,10 +5,42 @@ type SummarizeConversationBody = {
   conversation_id?: string;
 };
 
-function stripCodeFences(value: string) {
-  const trimmed = value.trim();
-  const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return fencedMatch?.[1]?.trim() ?? trimmed;
+function normalizeSummary(raw: unknown): string {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (typeof parsed === "string") {
+        return parsed.trim();
+      }
+
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "summary" in parsed &&
+        typeof (parsed as { summary?: unknown }).summary === "string"
+      ) {
+        return (parsed as { summary: string }).summary.trim();
+      }
+
+      return "Résumé indisponible. Relecture humaine recommandée.";
+    } catch {
+      return trimmed;
+    }
+  }
+
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "summary" in raw &&
+    typeof (raw as { summary?: unknown }).summary === "string"
+  ) {
+    return (raw as { summary: string }).summary.trim();
+  }
+
+  return "Résumé indisponible. Relecture humaine recommandée.";
 }
 
 function clampToFiveLines(value: string) {
@@ -20,56 +52,6 @@ function clampToFiveLines(value: string) {
     .join("\n");
 }
 
-function safeExtractSummary(raw: unknown): string {
-  const fallback = "Résumé indisponible. Relecture humaine recommandée.";
-
-  if (typeof raw === "string") {
-    const cleaned = stripCodeFences(raw);
-
-    try {
-      const parsed = JSON.parse(cleaned) as unknown;
-      return safeExtractSummary(parsed);
-    } catch {
-      return clampToFiveLines(cleaned || fallback) || fallback;
-    }
-  }
-
-  if (raw && typeof raw === "object") {
-    const candidate = raw as Record<string, unknown>;
-
-    if (typeof candidate.summary === "string") {
-      return clampToFiveLines(candidate.summary.trim()) || fallback;
-    }
-
-    const parts: string[] = [];
-    const push = (label: string, value: unknown) => {
-      if (typeof value === "string" && value.trim()) {
-        parts.push(`${label}: ${value.trim()}`);
-      }
-    };
-
-    push("Besoin", candidate.need ?? candidate.main_need ?? candidate.goal);
-    push(
-      "Infos données",
-      candidate.shared_information ??
-        candidate.provided_information ??
-        candidate.information
-    );
-    push("Intérêt", candidate.interest_level ?? candidate.interest ?? candidate.engagement);
-    push("Objections", candidate.objections ?? candidate.questions_remaining);
-    push(
-      "Prochaine action",
-      candidate.next_action ?? candidate.recommended_next_step ?? candidate.action
-    );
-
-    if (parts.length > 0) {
-      return clampToFiveLines(parts.join("\n")) || fallback;
-    }
-  }
-
-  return fallback;
-}
-
 function hasRateLimitError(error: unknown) {
   const message =
     error instanceof Error ? error.message : typeof error === "string" ? error : "";
@@ -78,19 +60,12 @@ function hasRateLimitError(error: unknown) {
 }
 
 async function callGroqSummary(userPrompt: string, model: "fast" | "text") {
-  const raw = await generateGroqChatCompletion({
+  return generateGroqChatCompletion({
     systemPrompt:
-      'Tu es un assistant interne pour une equipe commerciale WhatsApp. Resume la conversation pour aider un agent humain. Le resume doit etre court, clair et exploitable. Inclure le besoin principal du lead, les informations deja donnees, le niveau d\'interet, les objections ou questions restantes, et la prochaine action recommande. Ne pas inventer d\'informations. Ne pas ajouter d\'informations qui ne sont pas dans la conversation. Ne pas ecrire au lead. Ecrire pour l\'agent interne. Maximum 5 lignes. Retourne uniquement un JSON valide avec la forme {"summary":"texte court du resume"}.',
+      "Tu es un assistant interne pour une equipe commerciale WhatsApp. Resume la conversation pour aider un agent humain. Le resume doit etre court, clair et exploitable. Inclure le besoin principal du lead, les informations deja donnees, le niveau d'interet, les objections ou questions restantes, et la prochaine action recommande. Ne pas inventer d'informations. Ne pas ajouter d'informations qui ne sont pas dans la conversation. Ne pas ecrire au lead. Ecrire pour l'agent interne. Maximum 5 lignes. Retourne uniquement le resume en texte brut. Pas de JSON. Pas de markdown.",
     userPrompt,
     model,
   });
-
-  console.log("Groq summary raw:", raw);
-
-  const summaryText = safeExtractSummary(raw);
-  console.log("Groq summary text:", summaryText);
-
-  return summaryText;
 }
 
 export async function POST(request: Request) {
@@ -163,9 +138,10 @@ export async function POST(request: Request) {
         created_at: message.created_at,
       }));
 
-    const userPrompt = JSON.stringify(
-      {
-        conversation: {
+    const userPrompt = [
+      "Conversation:",
+      JSON.stringify(
+        {
           id: conversation.id,
           status: conversation.status,
           contact: {
@@ -174,31 +150,42 @@ export async function POST(request: Request) {
             phone: conversation.phone,
           },
         },
-        messages,
-        instructions:
-          'Return only JSON in the format {"summary":"texte court du resume"} and keep it to at most 5 lines.',
-      },
-      null,
-      2
-    );
+        null,
+        2
+      ),
+      "",
+      "Messages:",
+      JSON.stringify(messages, null, 2),
+      "",
+      "Retourne uniquement le résumé en texte brut. Pas de JSON. Pas de markdown.",
+    ].join("\n");
 
-    let summaryText: string;
+    let raw: unknown;
 
     try {
-      summaryText = await callGroqSummary(userPrompt, "fast");
+      raw = await callGroqSummary(userPrompt, "fast");
     } catch (error) {
       if (hasRateLimitError(error)) {
-        summaryText = await callGroqSummary(userPrompt, "text");
+        raw = await callGroqSummary(userPrompt, "text");
       } else {
         throw error;
       }
     }
 
+    console.log("Groq summary raw:", raw);
+
+    let summaryText = normalizeSummary(raw);
     summaryText = clampToFiveLines(summaryText).trim();
+
+    if (summaryText === "[object Object]") {
+      summaryText = "Résumé indisponible. Relecture humaine recommandée.";
+    }
 
     if (!summaryText) {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
     }
+
+    console.log("Groq summary final:", summaryText);
 
     await db.query(
       `
