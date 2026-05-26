@@ -1,4 +1,5 @@
-﻿import { db } from "@/lib/db";
+import { analyzeConversationInternal } from "../ai/analyze-conversation/route";
+import { db } from "@/lib/db";
 
 const DEFAULT_CLIENT_NAME = "Esthellence";
 const DEFAULT_CAMPAIGN_NAME = "Campagne WhatsApp Ads Esthellence";
@@ -209,6 +210,10 @@ export async function POST(request: Request) {
     await db.query("update webhook_events set processed = true where id = $1", [
       webhookEventId,
     ]);
+
+    void analyzeConversationInternal(conversationId).catch((error) => {
+      console.error("Auto analysis failed:", error);
+    });
 
     return Response.json({
       received: true,

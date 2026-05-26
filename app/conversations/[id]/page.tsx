@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import AiSummaryBox from "@/components/AiSummaryBox";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 type ConversationMessage = {
   id: string;
@@ -20,6 +23,8 @@ type ConversationDetail = {
   ai_summary: string | null;
   detected_intent: string | null;
   urgency_level: string | null;
+  detected_language: string | null;
+  ai_suggested_status: string | null;
   human_takeover: boolean | null;
   contact: {
     profile_name: string | null;
@@ -29,15 +34,15 @@ type ConversationDetail = {
   messages: ConversationMessage[];
 };
 
-function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
-
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatField(value: string | null | undefined) {
+  return value && value.trim() ? value : "—";
 }
 
 function MessageBubble({ message }: { message: ConversationMessage }) {
@@ -73,20 +78,67 @@ export default async function ConversationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const response = await fetch(`${getBaseUrl()}/api/conversations/${id}`, {
-    cache: "no-store",
-  });
+  const conversationResult = await db.query(
+    `
+    select
+      conversations.id,
+      conversations.status,
+      conversations.ai_summary,
+      conversations.detected_intent,
+      conversations.urgency_level,
+      conversations.detected_language,
+      conversations.ai_suggested_status,
+      conversations.human_takeover,
+      contacts.profile_name,
+      contacts.wa_id,
+      contacts.phone
+    from conversations
+    inner join contacts on contacts.id = conversations.contact_id
+    where conversations.id = $1
+    limit 1
+    `,
+    [id]
+  );
 
-  if (response.status === 404) {
+  const conversationRow = conversationResult.rows[0];
+
+  if (!conversationRow) {
     notFound();
   }
 
-  if (!response.ok) {
-    throw new Error("Failed to load conversation");
-  }
+  const messagesResult = await db.query(
+    `
+    select
+      id,
+      direction,
+      message_type,
+      content,
+      whatsapp_message_id,
+      status,
+      created_at
+    from messages
+    where conversation_id = $1
+    order by created_at asc
+    `,
+    [id]
+  );
 
-  const data: { conversation: ConversationDetail } = await response.json();
-  const conversation = data.conversation;
+  const conversation: ConversationDetail = {
+    id: conversationRow.id,
+    status: conversationRow.status,
+    ai_summary: conversationRow.ai_summary,
+    detected_intent: conversationRow.detected_intent,
+    urgency_level: conversationRow.urgency_level,
+    detected_language: conversationRow.detected_language,
+    ai_suggested_status: conversationRow.ai_suggested_status,
+    human_takeover: conversationRow.human_takeover,
+    contact: {
+      profile_name: conversationRow.profile_name,
+      wa_id: conversationRow.wa_id,
+      phone: conversationRow.phone,
+    },
+    messages: messagesResult.rows,
+  };
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -130,7 +182,31 @@ export default async function ConversationDetailPage({
                     Urgence
                   </div>
                   <div className="mt-2 text-sm font-medium text-white">
-                    {conversation.urgency_level ?? "normal"}
+                    {formatField(conversation.urgency_level ?? "normal")}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Langue détectée
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-white">
+                    {formatField(conversation.detected_language)}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Intention détectée
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-white">
+                    {formatField(conversation.detected_intent)}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                    Statut suggéré IA
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-white">
+                    {formatField(conversation.ai_suggested_status)}
                   </div>
                 </div>
                 <div className="sm:col-span-2">

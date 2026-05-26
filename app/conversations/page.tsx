@@ -1,8 +1,13 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 type Conversation = {
   conversation_id: string;
   status: string;
+  detected_intent: string | null;
+  detected_language: string | null;
   last_message_preview: string | null;
   last_message_at: string | null;
   created_at: string;
@@ -22,17 +27,27 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function getBaseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
-
 export default async function ConversationsPage() {
-  const response = await fetch(`${getBaseUrl()}/api/conversations`, {
-    cache: "no-store",
-  });
+  const result = await db.query(
+    `
+    select
+      conversations.id as conversation_id,
+      conversations.status,
+      conversations.detected_intent,
+      conversations.detected_language,
+      conversations.last_message_preview,
+      conversations.last_message_at,
+      conversations.created_at,
+      contacts.profile_name,
+      contacts.wa_id,
+      contacts.phone
+    from conversations
+    inner join contacts on contacts.id = conversations.contact_id
+    order by conversations.created_at desc
+    `
+  );
 
-  const data: { conversations?: Conversation[] } = await response.json();
-  const conversations = data.conversations ?? [];
+  const conversations = result.rows as Conversation[];
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -75,6 +90,8 @@ export default async function ConversationsPage() {
                     <th className="px-6 py-4">Numéro WhatsApp</th>
                     <th className="px-6 py-4">Dernier message</th>
                     <th className="px-6 py-4">Statut</th>
+                    <th className="px-6 py-4">Intention</th>
+                    <th className="px-6 py-4">Langue</th>
                     <th className="px-6 py-4">Dernière activité</th>
                     <th className="px-6 py-4">Action</th>
                   </tr>
@@ -102,6 +119,12 @@ export default async function ConversationsPage() {
                         <span className="inline-flex rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300 ring-1 ring-inset ring-cyan-400/20">
                           {conversation.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {conversation.detected_intent ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {conversation.detected_language ?? "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
                         {formatDate(
