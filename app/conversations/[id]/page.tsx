@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import AiSummaryBox from "@/components/AiSummaryBox";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
+import {
+  getMediaReviewLabel,
+  isNonTextMediaMessageType,
+} from "@/lib/analyze-conversation";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +30,7 @@ type ConversationDetail = {
   detected_language: string | null;
   ai_suggested_status: string | null;
   human_takeover: boolean | null;
+  last_inbound_message_type: string | null;
   contact: {
     profile_name: string | null;
     wa_id: string;
@@ -89,11 +94,20 @@ export default async function ConversationDetailPage({
       conversations.detected_language,
       conversations.ai_suggested_status,
       conversations.human_takeover,
+      latest_inbound.last_inbound_message_type,
       contacts.profile_name,
       contacts.wa_id,
       contacts.phone
     from conversations
     inner join contacts on contacts.id = conversations.contact_id
+    left join lateral (
+      select messages.message_type as last_inbound_message_type
+      from messages
+      where messages.conversation_id = conversations.id
+        and messages.direction = 'inbound'
+      order by messages.created_at desc
+      limit 1
+    ) latest_inbound on true
     where conversations.id = $1
     limit 1
     `,
@@ -132,6 +146,7 @@ export default async function ConversationDetailPage({
     detected_language: conversationRow.detected_language,
     ai_suggested_status: conversationRow.ai_suggested_status,
     human_takeover: conversationRow.human_takeover,
+    last_inbound_message_type: conversationRow.last_inbound_message_type,
     contact: {
       profile_name: conversationRow.profile_name,
       wa_id: conversationRow.wa_id,
@@ -139,6 +154,12 @@ export default async function ConversationDetailPage({
     },
     messages: messagesResult.rows,
   };
+  const mediaReviewLabel = getMediaReviewLabel(
+    conversation.last_inbound_message_type
+  );
+  const isMediaReceived = isNonTextMediaMessageType(
+    conversation.last_inbound_message_type
+  );
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -209,6 +230,16 @@ export default async function ConversationDetailPage({
                     {formatField(conversation.ai_suggested_status)}
                   </div>
                 </div>
+                {isMediaReceived && mediaReviewLabel ? (
+                  <div className="sm:col-span-2 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
+                      Média reçu
+                    </div>
+                    <div className="mt-2 text-sm font-medium text-amber-50">
+                      {mediaReviewLabel}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="sm:col-span-2">
                   <AiSummaryBox
                     conversationId={conversation.id}

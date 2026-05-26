@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { getIntentDisplayLabel } from "@/lib/analyze-conversation";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ type Conversation = {
   ai_suggested_status: string | null;
   detected_intent: string | null;
   detected_language: string | null;
+  last_inbound_message_type: string | null;
   last_message_preview: string | null;
   last_message_at: string | null;
   created_at: string;
@@ -37,6 +39,7 @@ export default async function ConversationsPage() {
       conversations.ai_suggested_status,
       conversations.detected_intent,
       conversations.detected_language,
+      latest_inbound.last_inbound_message_type,
       conversations.last_message_preview,
       conversations.last_message_at,
       conversations.created_at,
@@ -45,6 +48,14 @@ export default async function ConversationsPage() {
       contacts.phone
     from conversations
     inner join contacts on contacts.id = conversations.contact_id
+    left join lateral (
+      select messages.message_type as last_inbound_message_type
+      from messages
+      where messages.conversation_id = conversations.id
+        and messages.direction = 'inbound'
+      order by messages.created_at desc
+      limit 1
+    ) latest_inbound on true
     order by conversations.last_message_at desc nulls last,
              conversations.created_at desc
     `
@@ -131,7 +142,10 @@ export default async function ConversationsPage() {
                         {conversation.detected_language ?? "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
-                        {conversation.detected_intent ?? "—"}
+                        {getIntentDisplayLabel(
+                          conversation.detected_intent,
+                          conversation.last_inbound_message_type
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
                         {formatDate(
