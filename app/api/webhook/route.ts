@@ -1,4 +1,5 @@
 import { analyzeConversationInternal } from "../ai/analyze-conversation/route";
+import { handleLimitedAutoReply } from "@/lib/auto-reply";
 import { db } from "@/lib/db";
 
 const DEFAULT_CLIENT_NAME = "Esthellence";
@@ -211,9 +212,18 @@ export async function POST(request: Request) {
       webhookEventId,
     ]);
 
-    void analyzeConversationInternal(conversationId).catch((error) => {
-      console.error("Auto analysis failed:", error);
-    });
+    void analyzeConversationInternal(conversationId)
+      .then(() =>
+        handleLimitedAutoReply({
+          conversationId,
+          inboundMessageId: message.id ?? undefined,
+        }).catch((error) => {
+          console.error("Limited auto-reply failed:", error);
+        })
+      )
+      .catch((error) => {
+        console.error("Auto analysis failed:", error);
+      });
 
     return Response.json({
       received: true,

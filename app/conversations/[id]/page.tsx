@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AiSummaryBox from "@/components/AiSummaryBox";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
+import { getAiSettings } from "@/lib/ai-settings";
 import {
   getMediaReviewLabel,
   isNonTextMediaMessageType,
@@ -154,6 +155,10 @@ export default async function ConversationDetailPage({
     },
     messages: messagesResult.rows,
   };
+  const aiSettings = await getAiSettings();
+  const limitedAutoReplyActive =
+    aiSettings.mode === "limited_auto_reply" &&
+    aiSettings.auto_reply_enabled;
   const mediaReviewLabel = getMediaReviewLabel(
     conversation.last_inbound_message_type
   );
@@ -185,6 +190,11 @@ export default async function ConversationDetailPage({
               <p className="mt-2 text-sm text-slate-300">
                 {conversation.contact.phone ?? conversation.contact.wa_id}
               </p>
+              {limitedAutoReplyActive ? (
+                <div className="mt-3 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
+                  Mode auto-réponse limitée actif
+                </div>
+              ) : null}
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
