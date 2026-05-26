@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
 
 type ConversationMessage = {
@@ -116,8 +117,11 @@ export default async function ConversationDetailPage({
                   <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
                     Statut
                   </div>
-                  <div className="mt-2 text-sm font-medium text-white">
-                    {conversation.status}
+                  <div className="mt-2">
+                    <LeadStatusSelect
+                      conversationId={conversation.id}
+                      currentStatus={conversation.status}
+                    />
                   </div>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
