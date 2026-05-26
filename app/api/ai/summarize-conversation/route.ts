@@ -11,6 +11,88 @@ function stripCodeFences(value: string) {
   return fencedMatch?.[1]?.trim() ?? trimmed;
 }
 
+function clampToFiveLines(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .join("\n");
+}
+
+function safeExtractSummary(raw: unknown): string {
+  const fallback = "Résumé indisponible. Relecture humaine recommandée.";
+
+  if (typeof raw === "string") {
+    const cleaned = stripCodeFences(raw);
+
+    try {
+      const parsed = JSON.parse(cleaned) as unknown;
+      return safeExtractSummary(parsed);
+    } catch {
+      return clampToFiveLines(cleaned || fallback) || fallback;
+    }
+  }
+
+  if (raw && typeof raw === "object") {
+    const candidate = raw as Record<string, unknown>;
+
+    if (typeof candidate.summary === "string") {
+      return clampToFiveLines(candidate.summary.trim()) || fallback;
+    }
+
+    const parts: string[] = [];
+    const push = (label: string, value: unknown) => {
+      if (typeof value === "string" && value.trim()) {
+        parts.push(`${label}: ${value.trim()}`);
+      }
+    };
+
+    push("Besoin", candidate.need ?? candidate.main_need ?? candidate.goal);
+    push(
+      "Infos données",
+      candidate.shared_information ??
+        candidate.provided_information ??
+        candidate.information
+    );
+    push("Intérêt", candidate.interest_level ?? candidate.interest ?? candidate.engagement);
+    push("Objections", candidate.objections ?? candidate.questions_remaining);
+    push(
+      "Prochaine action",
+      candidate.next_action ?? candidate.recommended_next_step ?? candidate.action
+    );
+
+    if (parts.length > 0) {
+      return clampToFiveLines(parts.join("\n")) || fallback;
+    }
+  }
+
+  return fallback;
+}
+
+function hasRateLimitError(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+
+  return /rate_limit|rate_limit_exceeded/i.test(message);
+}
+
+async function callGroqSummary(userPrompt: string, model: "fast" | "text") {
+  const raw = await generateGroqChatCompletion({
+    systemPrompt:
+      'Tu es un assistant interne pour une equipe commerciale WhatsApp. Resume la conversation pour aider un agent humain. Le resume doit etre court, clair et exploitable. Inclure le besoin principal du lead, les informations deja donnees, le niveau d\'interet, les objections ou questions restantes, et la prochaine action recommande. Ne pas inventer d\'informations. Ne pas ajouter d\'informations qui ne sont pas dans la conversation. Ne pas ecrire au lead. Ecrire pour l\'agent interne. Maximum 5 lignes. Retourne uniquement un JSON valide avec la forme {"summary":"texte court du resume"}.',
+    userPrompt,
+    model,
+  });
+
+  console.log("Groq summary raw:", raw);
+
+  const summaryText = safeExtractSummary(raw);
+  console.log("Groq summary text:", summaryText);
+
+  return summaryText;
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SummarizeConversationBody;
@@ -57,17 +139,29 @@ export async function POST(request: Request) {
         direction,
         message_type,
         content,
-        whatsapp_message_id,
-        status,
         created_at
       from messages
       where conversation_id = $1
-      order by created_at asc
+      order by created_at desc
+      limit 8
       `,
       [conversationId]
     );
 
-    const messages = messagesResult.rows;
+    const messages = messagesResult.rows
+      .reverse()
+      .map((message) => ({
+        id: message.id,
+        direction: message.direction,
+        message_type: message.message_type,
+        content:
+          typeof message.content === "string"
+            ? message.content.slice(0, 500)
+            : message.content == null
+              ? ""
+              : String(message.content).slice(0, 500),
+        created_at: message.created_at,
+      }));
 
     const userPrompt = JSON.stringify(
       {
@@ -80,35 +174,30 @@ export async function POST(request: Request) {
             phone: conversation.phone,
           },
         },
-        messages: messages.map((message) => ({
-          id: message.id,
-          direction: message.direction,
-          message_type: message.message_type,
-          content: message.content,
-          created_at: message.created_at,
-        })),
+        messages,
         instructions:
-          'Return only JSON in the format {"summary":"..."} and keep it to at most 5 lines.',
+          'Return only JSON in the format {"summary":"texte court du resume"} and keep it to at most 5 lines.',
       },
       null,
       2
     );
 
-    const groqContent = await generateGroqChatCompletion({
-      systemPrompt:
-        "Tu es un assistant interne pour une equipe commerciale WhatsApp. Resumes la conversation pour aider un agent humain. Le resume doit etre court, clair et exploitable. Inclure le besoin principal du lead, les informations deja donnees, le niveau d'interet, les objections ou questions restantes, et la prochaine action recommande. Ne pas inventer d'informations. Ne pas ajouter d'informations qui ne sont pas dans la conversation. Ne pas ecrire au lead. Ecrire pour l'agent interne. Maximum 5 lignes. Retourne uniquement un JSON valide.",
-      userPrompt,
-      model: "fast",
-    });
+    let summaryText: string;
 
-    const parsed = JSON.parse(stripCodeFences(groqContent)) as {
-      summary?: string;
-    };
+    try {
+      summaryText = await callGroqSummary(userPrompt, "fast");
+    } catch (error) {
+      if (hasRateLimitError(error)) {
+        summaryText = await callGroqSummary(userPrompt, "text");
+      } else {
+        throw error;
+      }
+    }
 
-    const summary = String(parsed.summary ?? "").trim();
+    summaryText = clampToFiveLines(summaryText).trim();
 
-    if (!summary) {
-      throw new Error("Groq summary was empty");
+    if (!summaryText) {
+      summaryText = "Résumé indisponible. Relecture humaine recommandée.";
     }
 
     await db.query(
@@ -117,12 +206,12 @@ export async function POST(request: Request) {
       set ai_summary = $1
       where id = $2
       `,
-      [summary, conversationId]
+      [summaryText, conversationId]
     );
 
     return Response.json({
       success: true,
-      summary,
+      summary: summaryText,
     });
   } catch (error) {
     console.error("Failed to summarize conversation:", error);
