@@ -1,41 +1,33 @@
-import { db } from "@/lib/db";
-
-type ConversationRow = {
-  conversation_id: string;
-  status: string;
-  last_message_preview: string | null;
-  last_message_at: string | null;
-  created_at: string;
-  profile_name: string | null;
-  wa_id: string;
-  phone: string | null;
-};
+﻿import { db } from "@/lib/db";
 
 export async function GET() {
   try {
-    const result = await db.query<ConversationRow>(
-      `
+    const result = await db.query(`
       select
-        conv.id as conversation_id,
-        conv.status,
-        conv.last_message_preview,
-        conv.last_message_at,
-        conv.created_at,
-        c.profile_name,
-        c.wa_id,
-        c.phone
-      from conversations conv
-      inner join contacts c on c.id = conv.contact_id
-      order by conv.last_message_at desc nulls last, conv.created_at desc
-      `
-    );
+        conversations.id as conversation_id,
+        conversations.status,
+        conversations.last_message_preview,
+        conversations.last_message_at,
+        conversations.created_at,
+        contacts.profile_name,
+        contacts.wa_id,
+        contacts.phone
+      from conversations
+      join contacts on contacts.id = conversations.contact_id
+      order by conversations.last_message_at desc nulls last,
+               conversations.created_at desc
+    `);
 
-    return Response.json({ conversations: result.rows });
+    return Response.json({
+      conversations: result.rows,
+    });
   } catch (error) {
     console.error("Failed to fetch conversations:", error);
 
     return Response.json(
-      { error: "Failed to fetch conversations" },
+      {
+        error: "Failed to fetch conversations",
+      },
       { status: 500 }
     );
   }
