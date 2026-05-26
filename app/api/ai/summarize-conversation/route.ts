@@ -5,49 +5,60 @@ type SummarizeConversationBody = {
   conversation_id?: string;
 };
 
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function normalizeSummary(raw: unknown): string {
   const fallback = "Résumé indisponible. Relecture humaine recommandée.";
 
   function buildStructuredSummary(candidate: Record<string, unknown>) {
-    const need = candidate["besoin principal"];
-    const info = candidate["informations déjà données"];
-    const interest = candidate["niveau d'intérêt"];
-    const questions = candidate["objections ou questions restantes"];
-    const nextAction = candidate["prochaine action recommandée"];
+    const normalized = new Map<string, unknown>();
 
-    if (
-      typeof need === "string" ||
-      typeof info === "string" ||
-      typeof interest === "string" ||
-      typeof questions === "string" ||
-      typeof nextAction === "string"
-    ) {
-      const lines: string[] = [];
-
-      if (typeof need === "string" && need.trim()) {
-        lines.push(`Besoin : ${need.trim()}.`);
-      }
-
-      if (typeof info === "string" && info.trim()) {
-        lines.push(`Infos données : ${info.trim()}.`);
-      }
-
-      if (typeof interest === "string" && interest.trim()) {
-        lines.push(`Niveau d’intérêt : ${interest.trim()}.`);
-      }
-
-      if (typeof questions === "string" && questions.trim()) {
-        lines.push(`Questions restantes : ${questions.trim()}.`);
-      }
-
-      if (typeof nextAction === "string" && nextAction.trim()) {
-        lines.push(`Prochaine action : ${nextAction.trim()}.`);
-      }
-
-      return lines.join("\n");
+    for (const [key, value] of Object.entries(candidate)) {
+      normalized.set(normalizeText(key), value);
     }
 
-    return fallback;
+    const need = normalized.get("besoin principal");
+    const info =
+      normalized.get("informations deja donnees") ??
+      normalized.get("informations deja donnéees") ??
+      normalized.get("informations deja données");
+    const interest =
+      normalized.get("niveau d'interet") ?? normalized.get("niveau dinteret");
+    const questions =
+      normalized.get("objections ou questions restantes") ??
+      normalized.get("objections ou questions restante");
+    const nextAction =
+      normalized.get("prochaine action recommandee") ??
+      normalized.get("prochaine action recommandée");
+
+    const lines: string[] = [];
+
+    if (typeof need === "string" && need.trim()) {
+      lines.push(`Besoin : ${need.trim()}.`);
+    }
+
+    if (typeof info === "string" && info.trim()) {
+      lines.push(`Infos données : ${info.trim()}.`);
+    }
+
+    if (typeof interest === "string" && interest.trim()) {
+      lines.push(`Niveau d’intérêt : ${interest.trim()}.`);
+    }
+
+    if (typeof questions === "string" && questions.trim()) {
+      lines.push(`Questions restantes : ${questions.trim()}.`);
+    }
+
+    if (typeof nextAction === "string" && nextAction.trim()) {
+      lines.push(`Prochaine action : ${nextAction.trim()}.`);
+    }
+
+    return lines.join("\n") || fallback;
   }
 
   if (typeof raw === "string") {
@@ -57,7 +68,7 @@ function normalizeSummary(raw: unknown): string {
       const parsed = JSON.parse(trimmed);
 
       if (typeof parsed === "string") {
-        return parsed.trim();
+        return parsed.trim() || fallback;
       }
 
       if (
@@ -66,7 +77,7 @@ function normalizeSummary(raw: unknown): string {
         "summary" in parsed &&
         typeof (parsed as { summary?: unknown }).summary === "string"
       ) {
-        return (parsed as { summary: string }).summary.trim();
+        return (parsed as { summary: string }).summary.trim() || fallback;
       }
 
       if (parsed && typeof parsed === "object") {
@@ -75,7 +86,7 @@ function normalizeSummary(raw: unknown): string {
 
       return fallback;
     } catch {
-      return trimmed;
+      return trimmed || fallback;
     }
   }
 
@@ -85,7 +96,7 @@ function normalizeSummary(raw: unknown): string {
     "summary" in raw &&
     typeof (raw as { summary?: unknown }).summary === "string"
   ) {
-    return (raw as { summary: string }).summary.trim();
+    return (raw as { summary: string }).summary.trim() || fallback;
   }
 
   if (raw && typeof raw === "object") {
@@ -114,7 +125,7 @@ function hasRateLimitError(error: unknown) {
 async function callGroqSummary(userPrompt: string, model: "fast" | "text") {
   return generateGroqChatCompletion({
     systemPrompt:
-      "Tu es un assistant interne pour une equipe commerciale WhatsApp. Resume la conversation pour aider un agent humain. Le resume doit etre court, clair et exploitable. Inclure le besoin principal du lead, les informations deja donnees, le niveau d'interet, les objections ou questions restantes, et la prochaine action recommande. Ne pas inventer d'informations. Ne pas ajouter d'informations qui ne sont pas dans la conversation. Ne pas ecrire au lead. Ecrire pour l'agent interne. Maximum 5 lignes. Retourne uniquement le resume en texte brut. Pas de JSON. Pas de markdown.",
+      'Tu es un assistant interne pour une equipe commerciale WhatsApp. Retourne uniquement ce JSON valide: {"besoin principal":"string","informations déjà données":"string","niveau d\'intérêt":"string","objections ou questions restantes":"string","prochaine action recommandée":"string"}. Retourne uniquement un JSON valide. Pas de markdown. Pas de texte avant ou après le JSON.',
     userPrompt,
     model,
   });
@@ -181,12 +192,7 @@ export async function POST(request: Request) {
         id: message.id,
         direction: message.direction,
         message_type: message.message_type,
-        content:
-          typeof message.content === "string"
-            ? message.content.slice(0, 500)
-            : message.content == null
-              ? ""
-              : String(message.content).slice(0, 500),
+        content: typeof message.content === "string" ? message.content.slice(0, 500) : "",
         created_at: message.created_at,
       }));
 
@@ -209,7 +215,7 @@ export async function POST(request: Request) {
       "Messages:",
       JSON.stringify(messages, null, 2),
       "",
-      "Retourne uniquement le résumé en texte brut. Pas de JSON. Pas de markdown.",
+      "Retourne uniquement le JSON demandé. Pas de markdown. Pas de texte avant ou après le JSON.",
     ].join("\n");
 
     let raw: unknown;
@@ -227,10 +233,11 @@ export async function POST(request: Request) {
     console.log("Groq summary raw:", raw);
 
     let summaryText = normalizeSummary(raw);
+    summaryText = clampToFiveLines(summaryText).trim();
+
     if (summaryText === "[object Object]") {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
     }
-    summaryText = clampToFiveLines(summaryText).trim();
 
     if (!summaryText) {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
