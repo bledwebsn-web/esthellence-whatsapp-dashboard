@@ -6,6 +6,50 @@ type SummarizeConversationBody = {
 };
 
 function normalizeSummary(raw: unknown): string {
+  const fallback = "Résumé indisponible. Relecture humaine recommandée.";
+
+  function buildStructuredSummary(candidate: Record<string, unknown>) {
+    const need = candidate["besoin principal"];
+    const info = candidate["informations déjà données"];
+    const interest = candidate["niveau d'intérêt"];
+    const questions = candidate["objections ou questions restantes"];
+    const nextAction = candidate["prochaine action recommandée"];
+
+    if (
+      typeof need === "string" ||
+      typeof info === "string" ||
+      typeof interest === "string" ||
+      typeof questions === "string" ||
+      typeof nextAction === "string"
+    ) {
+      const lines: string[] = [];
+
+      if (typeof need === "string" && need.trim()) {
+        lines.push(`Besoin : ${need.trim()}.`);
+      }
+
+      if (typeof info === "string" && info.trim()) {
+        lines.push(`Infos données : ${info.trim()}.`);
+      }
+
+      if (typeof interest === "string" && interest.trim()) {
+        lines.push(`Niveau d’intérêt : ${interest.trim()}.`);
+      }
+
+      if (typeof questions === "string" && questions.trim()) {
+        lines.push(`Questions restantes : ${questions.trim()}.`);
+      }
+
+      if (typeof nextAction === "string" && nextAction.trim()) {
+        lines.push(`Prochaine action : ${nextAction.trim()}.`);
+      }
+
+      return lines.join("\n");
+    }
+
+    return fallback;
+  }
+
   if (typeof raw === "string") {
     const trimmed = raw.trim();
 
@@ -25,7 +69,11 @@ function normalizeSummary(raw: unknown): string {
         return (parsed as { summary: string }).summary.trim();
       }
 
-      return "Résumé indisponible. Relecture humaine recommandée.";
+      if (parsed && typeof parsed === "object") {
+        return buildStructuredSummary(parsed as Record<string, unknown>);
+      }
+
+      return fallback;
     } catch {
       return trimmed;
     }
@@ -40,7 +88,11 @@ function normalizeSummary(raw: unknown): string {
     return (raw as { summary: string }).summary.trim();
   }
 
-  return "Résumé indisponible. Relecture humaine recommandée.";
+  if (raw && typeof raw === "object") {
+    return buildStructuredSummary(raw as Record<string, unknown>);
+  }
+
+  return fallback;
 }
 
 function clampToFiveLines(value: string) {
@@ -175,11 +227,10 @@ export async function POST(request: Request) {
     console.log("Groq summary raw:", raw);
 
     let summaryText = normalizeSummary(raw);
-    summaryText = clampToFiveLines(summaryText).trim();
-
     if (summaryText === "[object Object]") {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
     }
+    summaryText = clampToFiveLines(summaryText).trim();
 
     if (!summaryText) {
       summaryText = "Résumé indisponible. Relecture humaine recommandée.";
