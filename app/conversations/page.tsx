@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 type Conversation = {
   conversation_id: string;
   status: string;
+  ai_suggested_status: string | null;
   detected_intent: string | null;
   detected_language: string | null;
   last_message_preview: string | null;
@@ -33,6 +34,7 @@ export default async function ConversationsPage() {
     select
       conversations.id as conversation_id,
       conversations.status,
+      conversations.ai_suggested_status,
       conversations.detected_intent,
       conversations.detected_language,
       conversations.last_message_preview,
@@ -43,7 +45,8 @@ export default async function ConversationsPage() {
       contacts.phone
     from conversations
     inner join contacts on contacts.id = conversations.contact_id
-    order by conversations.created_at desc
+    order by conversations.last_message_at desc nulls last,
+             conversations.created_at desc
     `
   );
 
@@ -90,8 +93,9 @@ export default async function ConversationsPage() {
                     <th className="px-6 py-4">Numéro WhatsApp</th>
                     <th className="px-6 py-4">Dernier message</th>
                     <th className="px-6 py-4">Statut</th>
-                    <th className="px-6 py-4">Intention</th>
+                    <th className="px-6 py-4">Statut IA</th>
                     <th className="px-6 py-4">Langue</th>
+                    <th className="px-6 py-4">Intention</th>
                     <th className="px-6 py-4">Dernière activité</th>
                     <th className="px-6 py-4">Action</th>
                   </tr>
@@ -121,10 +125,13 @@ export default async function ConversationsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
-                        {conversation.detected_intent ?? "—"}
+                        {conversation.ai_suggested_status ?? "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
                         {conversation.detected_language ?? "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-300">
+                        {conversation.detected_intent ?? "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-300">
                         {formatDate(
