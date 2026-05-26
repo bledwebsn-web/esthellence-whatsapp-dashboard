@@ -1,7 +1,18 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/health",
+        destination: "/api/health",
+      },
+      {
+        source: "/webhook",
+        destination: "/api/webhook",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
