@@ -1,30 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type ManualReplyFormProps = {
   conversationId: string;
 };
 
+const AI_STORAGE_KEY = "wabassist_composer_ai_enabled";
+
+function getStoredAiEnabled() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  const stored = window.localStorage.getItem(AI_STORAGE_KEY);
+  if (stored === "false") return false;
+  return true;
+}
+
 export default function ManualReplyForm({
   conversationId,
 }: ManualReplyFormProps) {
   const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [suggesting, setSuggesting] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [suggestionInfo, setSuggestionInfo] = useState<{
-    confidence: string;
-    needs_human: boolean;
-    reason: string;
-  } | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    setAiEnabled(getStoredAiEnabled());
+  }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(AI_STORAGE_KEY, String(aiEnabled));
+    } catch {
+      // ignore storage failures
+    }
+  }, [aiEnabled]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 140)}px`;
+  }, [message]);
+
+  const isMessageEmpty = message.trim().length === 0;
+
+  const aiButtonLabel = useMemo(() => {
+    return aiEnabled ? "WABAssist ON" : "WABAssist OFF";
+  }, [aiEnabled]);
+
+  function handleTextareaKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (!isMessageEmpty) {
+        void handleSubmit();
+      }
+      return;
+    }
+
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      void handleAiSuggestion();
+    }
+  }
+
+  async function handleSubmit() {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || loading) {
       return;
@@ -53,6 +104,7 @@ export default function ManualReplyForm({
       }
 
       setMessage("");
+      setSelectedFileName(null);
       setSuccess("Message envoyé.");
       router.refresh();
     } catch (submitError) {
@@ -67,11 +119,10 @@ export default function ManualReplyForm({
   }
 
   async function handleAiSuggestion() {
-    if (suggesting) {
+    if (loading) {
       return;
     }
 
-    setSuggesting(true);
     setError(null);
     setSuccess(null);
 
@@ -95,82 +146,167 @@ export default function ManualReplyForm({
       if (typeof data.reply === "string") {
         setMessage(data.reply);
       }
-
-      setSuggestionInfo({
-        confidence: String(data.confidence ?? "low"),
-        needs_human: Boolean(data.needs_human),
-        reason: String(data.reason ?? ""),
-      });
     } catch (suggestionError) {
       setError(
         suggestionError instanceof Error
           ? suggestionError.message
           : "Failed to generate AI suggestion"
       );
-    } finally {
-      setSuggesting(false);
     }
   }
 
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setSelectedFileName(file.name);
+    console.info("Media attachment staged (upload not wired yet):", file);
+  }
+
+  function handleMicClick() {
+    console.info("Voice input not implemented yet.");
+  }
+
   return (
-    <div className="px-3 py-3 sm:px-6 sm:py-4">
-      <div className="mx-auto w-full max-w-[980px] rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-composer)] p-3 shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur-md sm:rounded-3xl sm:p-4">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-medium text-[var(--app-fg)]">
-              Réponse manuelle
-            </label>
-            <div className="flex items-center gap-2 text-xs">
-              {success ? <p className="text-emerald-400">{success}</p> : null}
-              {error ? <p className="text-rose-400">{error}</p> : null}
-            </div>
-          </div>
-
-          <textarea
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            className="min-h-[48px] max-h-[96px] w-full resize-y rounded-2xl border border-[color:var(--app-input-border)] bg-[var(--app-input)] px-4 py-3 text-sm text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20 sm:min-h-[56px] sm:max-h-[140px]"
-            placeholder="Écrire une réponse…"
-            disabled={loading || suggesting}
-          />
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleAiSuggestion}
-              disabled={suggesting || loading}
-              className="inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {suggesting ? "WABAssist écrit…" : "Réponse IA"}
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !message.trim()}
-              className="inline-flex items-center rounded-full bg-cyan-400 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loading ? "Envoi…" : "Envoyer"}
-            </button>
-          </div>
-
-          {suggestionInfo ? (
-            <div className="rounded-2xl border border-[color:var(--app-border)] bg-black/20 px-3 py-2 text-xs leading-5 text-[var(--app-muted)]">
-              <div>
-                Confiance :{" "}
-                <span className="text-[var(--app-fg)]">{suggestionInfo.confidence}</span>
-              </div>
-              <div>
-                Besoin humain :{" "}
-                <span className="text-[var(--app-fg)]">
-                  {suggestionInfo.needs_human ? "Oui" : "Non"}
-                </span>
-              </div>
-              <div>
-                Raison :{" "}
-                <span className="text-[var(--app-fg)]">{suggestionInfo.reason}</span>
-              </div>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50">
+      <div className="mx-auto max-w-[980px] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-4">
+        <div className="pointer-events-auto rounded-[28px] border border-[color:var(--app-border)] bg-[var(--app-composer)]/95 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-2xl">
+          {selectedFileName ? (
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-1 text-[11px] text-[var(--app-muted)]">
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />
+              <span className="max-w-[200px] truncate">{selectedFileName}</span>
             </div>
           ) : null}
-        </form>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+            className="flex items-end gap-2"
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*,video/*,audio/*,.pdf"
+              onChange={handleFileSelect}
+            />
+
+            <button
+              type="button"
+              aria-label="Ajouter un fichier"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-5 w-5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+
+            <div className="flex min-w-0 flex-1 items-end rounded-[24px] border border-[color:var(--app-input-border)] bg-[var(--app-input)] px-3 py-2.5 shadow-inner shadow-black/10 focus-within:border-cyan-400/40 focus-within:ring-2 focus-within:ring-cyan-400/15">
+              <textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={handleTextareaKeyDown}
+                rows={1}
+                className="max-h-[140px] min-h-[48px] w-full resize-none border-0 bg-transparent px-0 py-0 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
+                placeholder="Écrire un message..."
+                disabled={loading}
+              />
+            </div>
+
+            {isMessageEmpty ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="Enregistrer un message vocal"
+                  onClick={handleMicClick}
+                  className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-5 w-5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
+                    <path d="M19 11a7 7 0 0 1-14 0" />
+                    <path d="M12 18v3" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  aria-label={aiButtonLabel}
+                  aria-pressed={aiEnabled}
+                  onClick={() => {
+                    setAiEnabled((current) => !current);
+                  }}
+                  className={`inline-flex h-10 flex-none items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${
+                    aiEnabled
+                      ? "border-cyan-300/30 bg-cyan-400/15 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.12),0_0_24px_rgba(34,211,238,0.12)]"
+                      : "border-[color:var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-muted)]"
+                  }`}
+                >
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[10px] font-semibold">
+                    AI
+                  </span>
+                  <span className="hidden sm:inline">{aiEnabled ? "ON" : "OFF"}</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                aria-label="Envoyer le message"
+                disabled={loading || !message.trim()}
+                className="relative inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition hover:scale-105 hover:bg-[var(--app-panel-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-5 w-5"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 19V5" />
+                  <path d="m6 11 6-6 6 6" />
+                </svg>
+              </button>
+            )}
+          </form>
+
+          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[11px] text-[var(--app-muted)]">
+            <div className="min-h-[16px]">
+              {loading ? "Envoi…" : success ?? error ?? ""}
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  aiEnabled ? "bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.75)]" : "bg-slate-500"
+                }`}
+              />
+              <span>{aiEnabled ? "WABAssist actif" : "WABAssist inactif"}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
