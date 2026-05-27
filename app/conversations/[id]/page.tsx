@@ -440,7 +440,9 @@ export default async function ConversationDetailPage({
               />
             </div>
 
-            <ManualReplyForm conversationId={conversation.id} />
+            <footer className="shrink-0 bg-transparent px-0 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
+              <ManualReplyForm conversationId={conversation.id} />
+            </footer>
           </section>
         </div>
       </div>

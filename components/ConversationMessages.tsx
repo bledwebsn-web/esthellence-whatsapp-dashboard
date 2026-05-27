@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { WABASSIST_BADGE_SRC } from "@/components/ManualReplyForm";
 
 type ConversationMessage = {
   id: string;
@@ -92,11 +93,10 @@ function messagesFingerprint(messages: ConversationMessage[]) {
     .join("::");
 }
 
-const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
-
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
+  const isAudioMessage = message.message_type === "audio";
   const whatsappStatus = getEffectiveDeliveryStatus(message);
 
   return (
@@ -111,7 +111,31 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
         }`}
       >
         <div className="whitespace-pre-wrap text-sm leading-6 sm:text-[15px]">
-          {message.content || "Message sans contenu"}
+          {isAudioMessage ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-black/5 text-current/80">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-4.5 w-4.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
+                  <path d="M19 11a7 7 0 0 1-14 0" />
+                  <path d="M12 18v3" />
+                </svg>
+              </span>
+              <div>
+                <div className="font-medium">Message vocal</div>
+                <div className="text-[12px] opacity-80">Audio WhatsApp</div>
+              </div>
+            </div>
+          ) : (
+            message.content || "Message sans contenu"
+          )}
         </div>
 
         <div
@@ -318,7 +342,7 @@ export default function ConversationMessages({
         ref={containerRef}
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[250px] sm:pb-[280px]">
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[120px] sm:pb-[140px]">
           <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
