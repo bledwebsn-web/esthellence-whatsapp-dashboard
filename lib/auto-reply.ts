@@ -80,6 +80,91 @@ function normalizeText(value: string) {
     .trim();
 }
 
+function normalizeIntent(intent: string): string {
+  const normalized = normalizeText(intent);
+
+  if (
+    normalized.includes("pricing") ||
+    normalized.includes("price") ||
+    normalized.includes("tarif") ||
+    normalized.includes("prix") ||
+    normalized.includes("cout") ||
+    normalized.includes("combien")
+  ) {
+    return "pricing";
+  }
+
+  if (
+    normalized.includes("schedule") ||
+    normalized.includes("date") ||
+    normalized.includes("planning") ||
+    normalized.includes("calendrier") ||
+    normalized.includes("quand")
+  ) {
+    return "schedule";
+  }
+
+  if (
+    normalized.includes("location") ||
+    normalized.includes("lieu") ||
+    normalized.includes("adresse") ||
+    normalized.includes("ou") ||
+    normalized.includes("où")
+  ) {
+    return "location";
+  }
+
+  if (
+    normalized.includes("programme") ||
+    normalized.includes("program") ||
+    normalized.includes("contenu") ||
+    normalized.includes("formation")
+  ) {
+    return "programme";
+  }
+
+  if (
+    normalized.includes("eligibility") ||
+    normalized.includes("eligible") ||
+    normalized.includes("éligible") ||
+    normalized.includes("pour qui") ||
+    normalized.includes("medecin") ||
+    normalized.includes("médecin")
+  ) {
+    return "eligibility";
+  }
+
+  if (
+    normalized.includes("registration") ||
+    normalized.includes("inscription") ||
+    normalized.includes("inscrire") ||
+    normalized.includes("reserver") ||
+    normalized.includes("réserver")
+  ) {
+    return "registration";
+  }
+
+  if (
+    normalized.includes("certificate") ||
+    normalized.includes("certificat") ||
+    normalized.includes("attestation")
+  ) {
+    return "certificate";
+  }
+
+  if (
+    normalized.includes("greeting") ||
+    normalized.includes("bonjour") ||
+    normalized.includes("salam") ||
+    normalized.includes("salut") ||
+    normalized.includes("hello")
+  ) {
+    return "greeting";
+  }
+
+  return normalized;
+}
+
 function isTextMessageType(messageType: string | null | undefined) {
   return (messageType ?? "").toLowerCase() === "text";
 }
@@ -703,7 +788,7 @@ export async function handleLimitedAutoReply({
     }
 
     const suggestion = suggestionResult.suggestion;
-    const normalizedIntent = normalizeText(suggestion.detected_intent);
+    const normalizedIntent = normalizeIntent(suggestion.detected_intent);
     const canonicalSuggestedStatus = canonicalizeStatus(suggestion.suggested_status);
     const normalizedReply = suggestion.reply.trim();
 
