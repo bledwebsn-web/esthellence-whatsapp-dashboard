@@ -23,7 +23,7 @@ type LogAutoReplyAttemptParams = {
   decision: AutoReplyDecision;
   reason: string;
   detectedIntent?: string | null;
-  confidence?: "high" | "medium" | "low" | null;
+  confidence?: "high" | "medium" | "low" | string | null;
   needsHuman?: boolean | null;
   reply?: string | null;
   rawPayload?: unknown;
@@ -180,7 +180,6 @@ function normalizeSuggestion(value: unknown): SuggestReplyResult | null {
 
   if (
     typeof candidate.reply !== "string" ||
-    !candidate.reply.trim() ||
     (candidate.confidence !== "high" &&
       candidate.confidence !== "medium" &&
       candidate.confidence !== "low") ||
@@ -222,10 +221,20 @@ async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
     await db.query(
       `
       insert into auto_reply_logs
-      (conversation_id, message_id, decision, reason, created_at)
-      values ($1, $2, $3, $4, now())
+      (conversation_id, message_id, decision, reason, detected_intent, confidence, needs_human, reply, raw_payload, created_at)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
       `,
-      [entry.conversationId, safeMessageId, entry.decision, entry.reason]
+      [
+        entry.conversationId,
+        safeMessageId,
+        entry.decision,
+        entry.reason,
+        entry.detectedIntent ?? null,
+        entry.confidence ?? null,
+        entry.needsHuman ?? null,
+        entry.reply ?? null,
+        entry.rawPayload ?? null,
+      ]
     );
   } catch (error) {
     console.error("Failed to insert auto_reply_logs:", error, entry);
@@ -324,7 +333,7 @@ async function generateSuggestion(params: {
   ) {
     return {
       suggestion: null,
-      reason: "Knowledge base not sufficient",
+      reason: "knowledge_base_not_sufficient",
     } as const;
   }
 
@@ -356,7 +365,14 @@ async function generateSuggestion(params: {
   if (!suggestion) {
     return {
       suggestion: null,
-      reason: "Invalid Groq suggestion",
+      reason: "unexpected_error",
+    } as const;
+  }
+
+  if (!suggestion.reply.trim()) {
+    return {
+      suggestion: null,
+      reason: "reply_empty",
     } as const;
   }
 
@@ -380,8 +396,8 @@ export async function handleLimitedAutoReply({
   console.log("Limited auto-reply start:", { conversationId, inboundMessageId });
   console.log("Limited auto-reply settings:", settings);
 
-  if (settings.mode !== "limited_auto_reply" || settings.auto_reply_enabled !== true) {
-    const reason = "Auto-reply disabled";
+  if (settings.mode !== "limited_auto_reply") {
+    const reason = "invalid_mode";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
       reason,
@@ -395,6 +411,38 @@ export async function handleLimitedAutoReply({
       inboundMessageId,
       decision: "skipped",
       reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: settings,
+    });
+
+    return {
+      sent: false,
+      decision: "skipped",
+      reason,
+    };
+  }
+
+  if (settings.auto_reply_enabled !== true) {
+    const reason = "auto_reply_disabled";
+    console.log("Limited auto-reply decision:", {
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+    });
+
+    await logAutoReplyAttempt({
+      conversationId,
+      inboundMessageId,
+      decision: "skipped",
+      reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: settings,
     });
 
     return {
@@ -429,7 +477,11 @@ export async function handleLimitedAutoReply({
       conversationId,
       inboundMessageId,
       decision: "error",
-      reason: error.message,
+      reason: "unexpected_error",
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: { error: error.message },
     });
     throw error;
   }
@@ -461,7 +513,7 @@ export async function handleLimitedAutoReply({
     | undefined;
 
   if (!lastMessage || lastMessage.direction !== "inbound") {
-    const reason = "No inbound message to process";
+    const reason = "unexpected_error";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
       reason,
@@ -475,6 +527,10 @@ export async function handleLimitedAutoReply({
       inboundMessageId,
       decision: "skipped",
       reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: { lastMessage: lastMessage ?? null },
     });
 
     return {
@@ -485,7 +541,7 @@ export async function handleLimitedAutoReply({
   }
 
   if (!isTextMessageType(lastMessage.message_type)) {
-    const reason = "Last inbound message is not text";
+    const reason = "last_inbound_not_text";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
       reason,
@@ -499,6 +555,10 @@ export async function handleLimitedAutoReply({
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
+      detectedIntent: "media_received",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: { lastMessage },
     });
 
     return {
@@ -525,7 +585,7 @@ export async function handleLimitedAutoReply({
     | undefined;
 
   if (recentOutbound && isRecentOutboundMessage(recentOutbound.created_at)) {
-    const reason = "Recent outbound message already sent";
+    const reason = "recent_outbound_message_already_sent";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
       reason,
@@ -539,6 +599,10 @@ export async function handleLimitedAutoReply({
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: { recentOutbound },
     });
 
     return {
@@ -551,7 +615,7 @@ export async function handleLimitedAutoReply({
   const lastInboundMessage = (lastMessage.content ?? "").trim();
 
   if (!lastInboundMessage) {
-    const reason = "Last inbound message is empty";
+    const reason = "unexpected_error";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
       reason,
@@ -565,6 +629,10 @@ export async function handleLimitedAutoReply({
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: { lastMessage },
     });
 
     return {
@@ -606,10 +674,12 @@ export async function handleLimitedAutoReply({
 
     if (!suggestionResult.suggestion) {
       const reason = suggestionResult.reason;
+      const detectedIntent =
+        reason === "reply_empty" ? "unknown" : "unknown";
       console.log("Limited auto-reply decision:", {
         decision: "skipped",
         reason,
-        detected_intent: "unknown",
+        detected_intent: detectedIntent,
         confidence: "low",
         needs_human: true,
       });
@@ -619,6 +689,10 @@ export async function handleLimitedAutoReply({
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
+        detectedIntent,
+        confidence: "low",
+        needsHuman: true,
+        rawPayload: suggestionResult,
       });
 
       return {
@@ -647,7 +721,22 @@ export async function handleLimitedAutoReply({
       !intentIsAllowed(normalizedIntent, settings.allowed_auto_intents) ||
       hasUnsafePhrase(normalizedReply)
     ) {
-      const reason = "Auto-reply conditions not met";
+      let reason = "intent_not_allowed";
+
+      if (!normalizedReply) {
+        reason = "reply_empty";
+      } else if (suggestion.confidence !== "high") {
+        reason = "confidence_not_high";
+      } else if (suggestion.needs_human) {
+        reason = "needs_human_true";
+      } else if (hasUnsafePhrase(normalizedReply)) {
+        reason = "reply_contains_blocked_phrase";
+      } else if (DISALLOWED_INTENTS.has(normalizedIntent)) {
+        reason = "intent_not_allowed";
+      } else if (!intentIsAllowed(normalizedIntent, settings.allowed_auto_intents)) {
+        reason = "intent_not_allowed";
+      }
+
       console.log("Limited auto-reply decision:", {
         decision: "skipped",
         reason,
@@ -661,6 +750,11 @@ export async function handleLimitedAutoReply({
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
+        detectedIntent: normalizedIntent,
+        confidence: suggestion.confidence,
+        needsHuman: suggestion.needs_human,
+        reply: normalizedReply,
+        rawPayload: suggestion,
       });
 
       return {
@@ -670,77 +764,112 @@ export async function handleLimitedAutoReply({
       };
     }
 
-    const { sendWhatsAppTextMessage } = await import("@/lib/whatsapp");
+    try {
+      const { sendWhatsAppTextMessage } = await import("@/lib/whatsapp");
 
-    const metaPayload = await sendWhatsAppTextMessage({
-      to: conversation.wa_id,
-      body: normalizedReply,
-    });
+      const metaPayload = await sendWhatsAppTextMessage({
+        to: conversation.wa_id,
+        body: normalizedReply,
+      });
 
-    const metaMessageId =
-      metaPayload?.messages?.[0]?.id ??
-      metaPayload?.message_id ??
-      metaPayload?.messageId ??
-      null;
+      const metaMessageId =
+        metaPayload?.messages?.[0]?.id ??
+        metaPayload?.message_id ??
+        metaPayload?.messageId ??
+        null;
 
-    await db.query(
-      `
-      insert into messages
-      (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload, status)
-      values ($1, $2, $3, $4, $5, $6, $7)
-      `,
-      [
+      await db.query(
+        `
+        insert into messages
+        (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload, status)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        `,
+        [
+          conversationId,
+          "outbound",
+          "text",
+          normalizedReply,
+          metaMessageId,
+          metaPayload,
+          "sent",
+        ]
+      );
+
+      const shouldUpdateStatus =
+        ALLOWED_STATUSES.has(canonicalSuggestedStatus) &&
+        !["rdv", "perdu", "spam"].includes(normalizeText(conversation.status));
+
+      await db.query(
+        `
+        update conversations
+        set last_message_preview = $1,
+            last_message_at = now()
+            ${shouldUpdateStatus ? ", status = $2" : ""}
+        where id = $3
+        `,
+        shouldUpdateStatus
+          ? [normalizedReply, canonicalSuggestedStatus, conversationId]
+          : [normalizedReply, conversationId]
+      );
+
+      const reason = suggestion.reason || "sent";
+      console.log("Limited auto-reply decision:", {
+        decision: "sent",
+        reason,
+        detected_intent: normalizedIntent,
+        confidence: suggestion.confidence,
+        needs_human: suggestion.needs_human,
+      });
+
+      await logAutoReplyAttempt({
         conversationId,
-        "outbound",
-        "text",
-        normalizedReply,
-        metaMessageId,
-        metaPayload,
-        "sent",
-      ]
-    );
+        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        decision: "sent",
+        reason,
+        detectedIntent: normalizedIntent,
+        confidence: suggestion.confidence,
+        needsHuman: suggestion.needs_human,
+        reply: normalizedReply,
+        rawPayload: metaPayload,
+      });
 
-    const shouldUpdateStatus =
-      ALLOWED_STATUSES.has(canonicalSuggestedStatus) &&
-      !["rdv", "perdu", "spam"].includes(normalizeText(conversation.status));
+      return {
+        sent: true,
+        decision: "sent",
+        reason,
+      };
+    } catch (error) {
+      const reason = "send_error";
 
-    await db.query(
-      `
-      update conversations
-      set last_message_preview = $1,
-          last_message_at = now()
-          ${shouldUpdateStatus ? ", status = $2" : ""}
-      where id = $3
-      `,
-      shouldUpdateStatus
-        ? [normalizedReply, canonicalSuggestedStatus, conversationId]
-        : [normalizedReply, conversationId]
-    );
+      console.error("Limited auto-reply send error:", error);
+      console.log("Limited auto-reply decision:", {
+        decision: "skipped",
+        reason,
+        detected_intent: normalizedIntent,
+        confidence: suggestion.confidence,
+        needs_human: suggestion.needs_human,
+      });
 
-    const reason = suggestion.reason || "Auto-reply sent";
-    console.log("Limited auto-reply decision:", {
-      decision: "sent",
-      reason,
-      detected_intent: normalizedIntent,
-      confidence: suggestion.confidence,
-      needs_human: suggestion.needs_human,
-    });
+      await logAutoReplyAttempt({
+        conversationId,
+        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        decision: "error",
+        reason,
+        detectedIntent: normalizedIntent,
+        confidence: suggestion.confidence,
+        needsHuman: suggestion.needs_human,
+        reply: normalizedReply,
+        rawPayload: error,
+      });
 
-    await logAutoReplyAttempt({
-      conversationId,
-      inboundMessageId: inboundMessageId ?? lastMessage.id,
-      decision: "sent",
-      reason,
-    });
-
-    return {
-      sent: true,
-      decision: "sent",
-      reason,
-    };
+      return {
+        sent: false,
+        decision: "skipped",
+        reason,
+      };
+    }
   } catch (error) {
-    const reason =
-      error instanceof Error ? error.message : "Failed to send auto-reply";
+    const reason = "unexpected_error";
 
     console.error("Limited auto-reply error:", error);
     console.log("Limited auto-reply decision:", {
@@ -756,6 +885,10 @@ export async function handleLimitedAutoReply({
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "error",
       reason,
+      detectedIntent: "unknown",
+      confidence: "low",
+      needsHuman: true,
+      rawPayload: error,
     });
 
     return {
