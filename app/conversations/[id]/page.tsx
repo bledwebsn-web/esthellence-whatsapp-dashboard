@@ -67,40 +67,49 @@ function formatField(value: string | null | undefined) {
 }
 
 function formatBoolean(value: boolean | null | undefined) {
-  if (value === true) {
-    return "oui";
-  }
-
-  if (value === false) {
-    return "non";
-  }
-
+  if (value === true) return "oui";
+  if (value === false) return "non";
   return "—";
+}
+
+function SidebarRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2">
+      <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </span>
+      <span className="text-right text-sm text-slate-100">{value}</span>
+    </div>
+  );
 }
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-semibold text-white">{log.decision}</div>
-        <div className="text-xs text-slate-400">
-          {formatDateTime(log.created_at)}
-        </div>
+    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium text-white">{log.decision}</div>
+        <div className="text-[11px] text-slate-500">{formatDateTime(log.created_at)}</div>
       </div>
-      <div className="mt-3 grid gap-2 text-sm text-slate-300">
+      <div className="mt-2 grid gap-1 text-xs text-slate-300">
         <div>
-          <span className="text-slate-400">Raison :</span> {formatField(log.reason)}
+          <span className="text-slate-500">Raison :</span> {formatField(log.reason)}
         </div>
         <div>
-          <span className="text-slate-400">Intention :</span>{" "}
+          <span className="text-slate-500">Intention :</span>{" "}
           {formatField(log.detected_intent)}
         </div>
         <div>
-          <span className="text-slate-400">Confidence :</span>{" "}
+          <span className="text-slate-500">Confidence :</span>{" "}
           {formatField(log.confidence)}
         </div>
         <div>
-          <span className="text-slate-400">Needs human :</span>{" "}
+          <span className="text-slate-500">Needs human :</span>{" "}
           {formatBoolean(log.needs_human)}
         </div>
       </div>
@@ -221,124 +230,132 @@ export default async function ConversationDetailPage({
   );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <Link
-            href="/conversations"
-            className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-          >
-            Retour
-          </Link>
-        </div>
+    <main className="h-screen overflow-hidden bg-slate-950 text-slate-100">
+      <div className="grid h-full grid-cols-1 lg:grid-cols-[340px_1fr]">
+        <aside className="border-b border-white/10 bg-slate-950/95 p-4 lg:border-b-0 lg:border-r">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Link
+              href="/conversations"
+              className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+            >
+              Retour
+            </Link>
+            {limitedAutoReplyActive ? (
+              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200">
+                Auto-réponse active
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300">
+                Auto-réponse en pause
+              </span>
+            )}
+          </div>
 
-        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl shadow-cyan-950/20 sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+          <div className="space-y-4 overflow-y-auto pr-1">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-cyan-300">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-300">
                 Dossier conversation
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
                 {conversation.contact.profile_name ?? "Contact inconnu"}
               </h1>
-              <p className="mt-2 text-sm text-slate-300">
+              <p className="mt-1 text-sm text-slate-300">
                 {conversation.contact.phone ?? conversation.contact.wa_id}
               </p>
-              {limitedAutoReplyActive ? (
-                <div className="mt-3 inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
-                  Mode auto-réponse limitée actif
-                </div>
-              ) : null}
+            </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Statut
-                  </div>
-                  <div className="mt-2">
-                    <LeadStatusSelect
-                      conversationId={conversation.id}
-                      currentStatus={conversation.status}
-                    />
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Urgence
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-white">
-                    {formatField(conversation.urgency_level ?? "normal")}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Langue détectée
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-white">
-                    {formatField(conversation.detected_language)}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Intention détectée
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-white">
-                    {formatField(conversation.detected_intent)}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                    Statut suggéré IA
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-white">
-                    {formatField(conversation.ai_suggested_status)}
-                  </div>
-                </div>
-                {isMediaReceived && mediaReviewLabel ? (
-                  <div className="sm:col-span-2 rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-amber-200/80">
-                      Média reçu
-                    </div>
-                    <div className="mt-2 text-sm font-medium text-amber-50">
-                      {mediaReviewLabel}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="sm:col-span-2">
-                  <AiSummaryBox
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <SidebarRow
+                label="Statut"
+                value={
+                  <LeadStatusSelect
                     conversationId={conversation.id}
-                    initialSummary={conversation.ai_summary}
+                    currentStatus={conversation.status}
                   />
-                </div>
-              </div>
+                }
+              />
+              <SidebarRow
+                label="Urgence"
+                value={formatField(conversation.urgency_level ?? "normal")}
+              />
+              <SidebarRow
+                label="Langue"
+                value={formatField(conversation.detected_language)}
+              />
+              <SidebarRow
+                label="Intention"
+                value={formatField(conversation.detected_intent)}
+              />
+              <SidebarRow
+                label="Statut IA"
+                value={formatField(conversation.ai_suggested_status)}
+              />
             </div>
 
-            <div className="flex min-h-0 flex-col gap-4">
-              <ConversationMessages messages={conversation.messages} />
-
-              <div className="sticky bottom-0 z-20 border-t border-white/10 bg-slate-950/95 pb-4 pt-4 backdrop-blur">
-                <ManualReplyForm conversationId={conversation.id} />
+            <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                Résumé IA
               </div>
-
-              <details className="rounded-3xl border border-white/10 bg-slate-900/60 p-4 sm:p-6">
-                <summary className="cursor-pointer list-none text-lg font-semibold text-white">
-                  Décisions auto-réponse IA
-                </summary>
-                <div className="mt-4 space-y-3">
-                  {autoReplyLogs.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-sm text-slate-400">
-                      Aucune décision auto-réponse pour le moment.
-                    </div>
-                  ) : (
-                    autoReplyLogs.map((log) => (
-                      <AutoReplyLogCard key={log.id} log={log} />
-                    ))
-                  )}
-                </div>
-              </details>
+              <AiSummaryBox
+                conversationId={conversation.id}
+                initialSummary={conversation.ai_summary}
+              />
             </div>
+
+            {isMediaReceived && mediaReviewLabel ? (
+              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
+                  Média reçu
+                </div>
+                <div className="mt-1">{mediaReviewLabel}</div>
+              </div>
+            ) : null}
+
+            <details className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-white">
+                Décisions IA récentes
+              </summary>
+              <div className="mt-3 space-y-2">
+                {autoReplyLogs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-sm text-slate-400">
+                    Aucune décision auto-réponse pour le moment.
+                  </div>
+                ) : (
+                  autoReplyLogs.map((log) => (
+                    <AutoReplyLogCard key={log.id} log={log} />
+                  ))
+                )}
+              </div>
+            </details>
           </div>
-        </section>
+        </aside>
+
+        <main className="flex h-full min-h-0 flex-col">
+          <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-5 py-4 backdrop-blur">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-white">
+                  {conversation.contact.profile_name ?? "Contact inconnu"}
+                </h2>
+                <p className="text-sm text-slate-400">
+                  {conversation.contact.phone ?? conversation.contact.wa_id}
+                </p>
+              </div>
+              <div className="text-right text-xs text-slate-400">
+                <div>{formatField(conversation.status)}</div>
+                <div>{conversation.messages.length} messages</div>
+              </div>
+            </div>
+          </header>
+
+          <section className="relative flex-1 min-h-0 overflow-hidden">
+            <ConversationMessages messages={conversation.messages} />
+          </section>
+
+          <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-5 py-4 backdrop-blur">
+            <ManualReplyForm conversationId={conversation.id} />
+          </footer>
+        </main>
       </div>
     </main>
   );

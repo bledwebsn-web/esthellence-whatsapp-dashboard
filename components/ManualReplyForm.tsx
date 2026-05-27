@@ -115,26 +115,28 @@ export default function ManualReplyForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4"
+      className="rounded-2xl border border-white/10 bg-slate-950/95 p-3 shadow-[0_-12px_30px_rgba(2,6,23,0.45)]"
     >
-      <label className="mb-3 block text-sm font-medium text-slate-200">
-        Réponse manuelle
-      </label>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <label className="text-sm font-medium text-slate-200">Réponse manuelle</label>
+        {success ? <p className="text-xs text-emerald-400">{success}</p> : null}
+        {error ? <p className="text-xs text-rose-400">{error}</p> : null}
+      </div>
+
       <textarea
         value={message}
         onChange={(event) => setMessage(event.target.value)}
-        rows={4}
-        className="min-h-28 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none"
+        className="min-h-[70px] max-h-[140px] w-full resize-y rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none"
         placeholder="Écrire une réponse..."
         disabled={loading || suggesting}
       />
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-3 flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={handleAiSuggestion}
           disabled={suggesting || loading}
-          className="inline-flex items-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {suggesting ? "Génération..." : "Réponse IA"}
         </button>
@@ -145,25 +147,22 @@ export default function ManualReplyForm({
         >
           {loading ? "Envoi..." : "Envoyer"}
         </button>
-
-        {success ? <p className="text-sm text-emerald-400">{success}</p> : null}
-        {error ? <p className="text-sm text-rose-400">{error}</p> : null}
       </div>
 
       {suggestionInfo ? (
-        <div className="mt-4 space-y-1 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-300">
-          <p>
+        <div className="mt-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+          <div>
             Confiance: <span className="text-white">{suggestionInfo.confidence}</span>
-          </p>
-          <p>
+          </div>
+          <div>
             Besoin humain:{" "}
             <span className="text-white">
               {suggestionInfo.needs_human ? "Oui" : "Non"}
             </span>
-          </p>
-          <p>
+          </div>
+          <div>
             Raison: <span className="text-slate-200">{suggestionInfo.reason}</span>
-          </p>
+          </div>
         </div>
       ) : null}
     </form>

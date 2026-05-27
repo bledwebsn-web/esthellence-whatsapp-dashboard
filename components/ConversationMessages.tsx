@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 type ConversationMessage = {
   id: string;
@@ -90,7 +90,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-lg ${
+        className={`max-w-[72%] rounded-2xl px-4 py-3 shadow-sm ${
           isInbound
             ? "bg-slate-800 text-slate-100"
             : "bg-cyan-500 text-slate-950"
@@ -149,27 +149,9 @@ export default function ConversationMessages({
     });
   }, [messages]);
 
-  const messageCountLabel = useMemo(() => `${messages.length} messages`, [messages.length]);
-
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-900/40 p-4 sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">Historique des messages</h2>
-        <button
-          type="button"
-          onClick={() =>
-            bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-          }
-          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-        >
-          Dernier message ↓
-        </button>
-      </div>
-
-      <div
-        ref={containerRef}
-        className="h-[calc(100vh-260px)] max-h-[70vh] overflow-y-auto pr-2"
-      >
+    <div className="relative h-full overflow-hidden">
+      <div ref={containerRef} className="h-full overflow-y-auto px-6 py-4 pr-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
@@ -184,7 +166,15 @@ export default function ConversationMessages({
         </div>
       </div>
 
-      <div className="mt-3 text-right text-xs text-slate-500">{messageCountLabel}</div>
-    </section>
+      <button
+        type="button"
+        onClick={() =>
+          bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+        }
+        className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/85 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900"
+      >
+        Dernier message ↓
+      </button>
+    </div>
   );
 }
