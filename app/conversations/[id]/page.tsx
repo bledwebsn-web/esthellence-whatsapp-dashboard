@@ -440,8 +440,10 @@ export default async function ConversationDetailPage({
               />
             </div>
 
-            <footer className="shrink-0 bg-transparent px-0 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
-              <ManualReplyForm conversationId={conversation.id} />
+            <footer className="pointer-events-none shrink-0 bg-transparent px-3 pb-3 sm:px-6 sm:pb-4">
+              <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
+                <ManualReplyForm conversationId={conversation.id} />
+              </div>
             </footer>
           </section>
         </div>

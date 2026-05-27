@@ -342,7 +342,7 @@ export default function ConversationMessages({
         ref={containerRef}
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[120px] sm:pb-[140px]">
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[110px] sm:pb-[120px]">
           <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
@@ -378,7 +378,7 @@ export default function ConversationMessages({
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-[calc(7rem+env(safe-area-inset-bottom))] left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-[calc(8rem+env(safe-area-inset-bottom))] sm:h-12 sm:w-12"
+          className="absolute bottom-4 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-5 sm:h-12 sm:w-12"
         >
           <span className="relative flex h-full w-full items-center justify-center">
             <svg

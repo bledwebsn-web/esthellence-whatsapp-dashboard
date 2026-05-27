@@ -12,8 +12,7 @@ export const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
 
 function getStoredAiEnabled() {
   if (typeof window === "undefined") return true;
-  const stored = window.localStorage.getItem(AI_STORAGE_KEY);
-  return stored !== "false";
+  return window.localStorage.getItem(AI_STORAGE_KEY) !== "false";
 }
 
 function supportsMimeType(mimeType: string) {
@@ -29,6 +28,7 @@ export default function ManualReplyForm({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaChunksRef = useRef<BlobPart[]>([]);
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -36,6 +36,8 @@ export default function ManualReplyForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  const hasText = message.trim().length > 0;
 
   useEffect(() => {
     setAiEnabled(getStoredAiEnabled());
@@ -54,7 +56,7 @@ export default function ManualReplyForm({
     if (!textarea) return;
 
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 96)}px`;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 88)}px`;
   }, [message]);
 
   useEffect(() => {
@@ -63,8 +65,6 @@ export default function ManualReplyForm({
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
-
-  const hasText = message.trim().length > 0;
 
   async function handleAiSuggestion() {
     if (loading) return;
@@ -138,29 +138,6 @@ export default function ManualReplyForm({
     }
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      if (hasText) {
-        void handleSubmit();
-      }
-      return;
-    }
-
-    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "a") {
-      event.preventDefault();
-      void handleAiSuggestion();
-    }
-  }
-
-  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFileName(file.name);
-    console.info("Media attachment staged (upload not wired yet):", file);
-  }
-
   async function startRecording() {
     try {
       setError(null);
@@ -174,9 +151,7 @@ export default function ManualReplyForm({
         ? "audio/ogg;codecs=opus"
         : "audio/webm";
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-      });
+      const recorder = new MediaRecorder(stream, { mimeType });
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -254,145 +229,170 @@ export default function ManualReplyForm({
     mediaRecorderRef.current?.stop();
   }
 
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      if (hasText) {
+        void handleSubmit();
+      }
+      return;
+    }
+
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      void handleAiSuggestion();
+    }
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFileName(file.name);
+    console.info("Media attachment staged (upload not wired yet):", file);
+  }
+
   return (
-    <div className="w-full px-3 py-3 sm:px-6 sm:py-4">
-      <div className="mx-auto w-full max-w-[980px]">
-        <div className="rounded-[30px] border border-white/10 bg-[color:var(--app-composer)]/92 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
-          {selectedFileName ? (
-            <div className="mb-2 flex items-center gap-2 px-1">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-[var(--app-muted)]">
-                <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                <span className="max-w-[220px] truncate">{selectedFileName}</span>
-              </span>
-            </div>
-          ) : null}
+    <div
+      className={`mx-auto w-full px-0 transition-all duration-300 sm:px-0 ${
+        hasText ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
+      }`}
+    >
+      <div className="rounded-[26px] border border-white/10 bg-white/[0.07] p-2 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        {selectedFileName ? (
+          <div className="mb-2 flex items-center gap-2 px-1">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-[var(--app-muted)]">
+              <span className="h-2 w-2 rounded-full bg-cyan-400" />
+              <span className="max-w-[220px] truncate">{selectedFileName}</span>
+            </span>
+          </div>
+        ) : null}
 
-          <div className="flex items-end gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*,video/*,audio/*,application/pdf"
-              onChange={handleFileSelect}
+        <div className="flex items-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            accept="image/*,video/*,audio/*,application/pdf"
+            onChange={handleFileSelect}
+          />
+
+          <button
+            type="button"
+            aria-label="Ajouter un fichier"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || recording}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-4.5 w-4.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder="Écrire un message..."
+              disabled={loading || recording}
+              className="min-h-[40px] max-h-[88px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
             />
+          </div>
 
+          {hasText ? (
             <button
               type="button"
-              aria-label="Ajouter un fichier"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={loading || recording}
+              aria-label="Envoyer le message"
+              onClick={() => void handleSubmit()}
+              disabled={loading || !hasText}
+              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/10 text-[var(--app-fg)] shadow-[0_10px_28px_rgba(0,0,0,0.18)] transition hover:scale-105 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 className="h-5 w-5"
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
+                <path d="M12 19V5" />
+                <path d="m6 11 6-6 6 6" />
               </svg>
             </button>
-
-            <div className="min-w-0 flex-1">
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={1}
-                placeholder="Écrire un message..."
-                disabled={loading || recording}
-                className="min-h-[44px] max-h-[96px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
-              />
-            </div>
-
-            {hasText ? (
+          ) : (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                aria-label="Envoyer le message"
-                onClick={() => void handleSubmit()}
-                disabled={loading || !hasText}
-                className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/10 text-[var(--app-fg)] shadow-[0_10px_30px_rgba(0,0,0,0.2)] transition hover:scale-105 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={recording ? "Arrêter l’enregistrement" : "Enregistrer un message vocal"}
+                onClick={() => {
+                  if (loading) return;
+                  if (recording) {
+                    stopRecording();
+                  } else {
+                    void startRecording();
+                  }
+                }}
+                disabled={loading}
+                className={`inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  recording
+                    ? "border-rose-400/35 bg-rose-400/10 text-rose-200 animate-pulse"
+                    : "border-white/10 bg-white/5 text-[var(--app-fg)] hover:bg-white/10"
+                }`}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-5 w-5"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 19V5" />
-                  <path d="m6 11 6-6 6 6" />
-                </svg>
+                {recording ? (
+                  <span className="h-3.5 w-3.5 rounded-sm bg-rose-300" />
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-5 w-5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
+                    <path d="M19 11a7 7 0 0 1-14 0" />
+                    <path d="M12 18v3" />
+                  </svg>
+                )}
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label={recording ? "Arrêter l’enregistrement" : "Enregistrer un message vocal"}
-                  onClick={() => {
-                    if (loading) return;
-                    if (recording) {
-                      stopRecording();
-                    } else {
-                      void startRecording();
-                    }
-                  }}
-                  disabled={loading}
-                  className={`inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                    recording
-                      ? "border-rose-400/40 bg-rose-400/15 text-rose-200 animate-pulse"
-                      : "border-white/10 bg-white/5 text-[var(--app-fg)] hover:bg-white/10"
-                  }`}
-                >
-                  {recording ? (
-                    <span className="h-3.5 w-3.5 rounded-sm bg-rose-300" />
-                  ) : (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-5 w-5"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
-                      <path d="M19 11a7 7 0 0 1-14 0" />
-                      <path d="M12 18v3" />
-                    </svg>
-                  )}
-                </button>
 
-                <button
-                  type="button"
-                  aria-label="Basculer WABAssist"
-                  aria-pressed={aiEnabled}
-                  onClick={() => setAiEnabled((current) => !current)}
-                  className={`inline-flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border p-0 transition ${
-                    aiEnabled
-                      ? "border-emerald-400/40 bg-white/5"
-                      : "border-white/10 bg-white/5"
+              <button
+                type="button"
+                aria-label="Basculer WABAssist"
+                aria-pressed={aiEnabled}
+                onClick={() => setAiEnabled((current) => !current)}
+                className={`inline-flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border p-0 transition ${
+                  aiEnabled ? "border-emerald-400/40 bg-white/5" : "border-white/10 bg-white/5"
+                }`}
+              >
+                <img
+                  src={WABASSIST_BADGE_SRC}
+                  alt="WABAssist"
+                  className={`h-full w-full rounded-full object-cover ${
+                    aiEnabled ? "opacity-100" : "opacity-60 grayscale"
                   }`}
-                >
-                  <img
-                    src={WABASSIST_BADGE_SRC}
-                    alt="WABAssist"
-                    className={`h-full w-full rounded-full object-cover ${
-                      aiEnabled ? "opacity-100" : "opacity-60 grayscale"
-                    }`}
-                  />
-                </button>
-              </div>
-            )}
-          </div>
+                />
+              </button>
+            </div>
+          )}
+        </div>
 
+        {(loading || success || error || recording) ? (
           <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[11px] text-[var(--app-muted)]">
             <div className="min-h-[16px]">
               {loading
@@ -408,7 +408,7 @@ export default function ManualReplyForm({
               </div>
             ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
