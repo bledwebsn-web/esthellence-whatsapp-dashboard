@@ -16,6 +16,9 @@ type ConversationMessage = {
   id: string;
   direction: "inbound" | "outbound" | string;
   message_type: string;
+  sender_type: string | null;
+  source_label: string | null;
+  delivery_status: string | null;
   content: string | null;
   whatsapp_message_id: string | null;
   status: string | null;
@@ -73,8 +76,65 @@ function formatBoolean(value: boolean | null | undefined) {
   return "—";
 }
 
+function resolveMessageParty(message: ConversationMessage) {
+  const sourceLabel = (message.source_label ?? "").trim();
+  const senderType = (message.sender_type ?? "").trim().toLowerCase();
+
+  if (sourceLabel === "WABAssist") {
+    return "ai";
+  }
+
+  if (senderType === "ai" || senderType === "human" || senderType === "lead") {
+    return senderType;
+  }
+
+  if (message.direction === "inbound") {
+    return "lead";
+  }
+
+  return "human";
+}
+
+function getWhatsappTickLabel(status: string | null | undefined) {
+  const normalized = (status ?? "").trim().toLowerCase();
+
+  if (normalized === "delivered") {
+    return "✓✓";
+  }
+
+  if (normalized === "read") {
+    return "✓✓";
+  }
+
+  if (normalized === "failed") {
+    return "échec";
+  }
+
+  if (normalized === "sent") {
+    return "✓";
+  }
+
+  return "✓";
+}
+
+function getWhatsappTickClass(status: string | null | undefined) {
+  const normalized = (status ?? "").trim().toLowerCase();
+
+  if (normalized === "read") {
+    return "text-cyan-300";
+  }
+
+  if (normalized === "failed") {
+    return "text-rose-300";
+  }
+
+  return "text-slate-400";
+}
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
+  const isAiMessage = resolveMessageParty(message) === "ai";
+  const whatsappStatus = message.delivery_status ?? message.status;
 
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
@@ -89,11 +149,32 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           {message.content || "Message sans contenu"}
         </div>
         <div
-          className={`mt-2 text-xs ${
+          className={`mt-2 flex items-center justify-end gap-2 text-xs ${
             isInbound ? "text-slate-400" : "text-cyan-950/70"
           }`}
         >
-          {formatDateTime(message.created_at)}
+          {isInbound ? (
+            <span>{formatDateTime(message.created_at)}</span>
+          ) : (
+            <>
+              {isAiMessage ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-100">
+                  <img
+                    src="/wabassist-badge.png"
+                    alt="WABAssist"
+                    className="h-4 w-4 rounded-full"
+                  />
+                  <span>WABAssist</span>
+                </span>
+              ) : null}
+              <span>{formatDateTime(message.created_at)}</span>
+              <span
+                className={`font-medium ${getWhatsappTickClass(whatsappStatus)}`}
+              >
+                {getWhatsappTickLabel(whatsappStatus)}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -179,6 +260,9 @@ export default async function ConversationDetailPage({
       id,
       direction,
       message_type,
+      sender_type,
+      source_label,
+      delivery_status,
       content,
       whatsapp_message_id,
       status,
