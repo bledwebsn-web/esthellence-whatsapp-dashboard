@@ -326,10 +326,8 @@ async function recordAutoReplyLog(entry: LogAutoReplyAttemptParams) {
   }
 }
 
-function isRecentOutboundMessage(createdAt: string | Date) {
-  const createdAtDate = new Date(createdAt);
-  const diffMs = Date.now() - createdAtDate.getTime();
-  return diffMs >= 0 && diffMs <= 2 * 60 * 1000;
+function isMessageUuid(value: string | undefined | null): boolean {
+  return isUuid(value);
 }
 
 function intentIsAllowed(intent: string, allowedAutoIntents: string[]) {
@@ -576,6 +574,8 @@ export async function handleLimitedAutoReply({
     select
       id,
       direction,
+      sender_type,
+      source_label,
       message_type,
       content,
       created_at
@@ -591,13 +591,15 @@ export async function handleLimitedAutoReply({
     | {
         id: string;
         direction: string;
+        sender_type: string | null;
+        source_label: string | null;
         message_type: string | null;
         content: string | null;
         created_at: string;
       }
     | undefined;
 
-  if (!lastMessage || lastMessage.direction !== "inbound") {
+  if (!lastMessage) {
     const reason = "unexpected_error";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
@@ -609,13 +611,13 @@ export async function handleLimitedAutoReply({
 
     await recordAutoReplyLog({
       conversationId,
-      inboundMessageId,
+      inboundMessageId: inboundMessageId ?? null,
       decision: "skipped",
       reason,
       detected_intent: "unknown",
       confidence: "low",
       needs_human: true,
-      raw_payload: { lastMessage: lastMessage ?? null },
+      raw_payload: { lastMessage: null },
     });
 
     return {
@@ -625,7 +627,144 @@ export async function handleLimitedAutoReply({
     };
   }
 
-  if (!isTextMessageType(lastMessage.message_type)) {
+  if (lastMessage.direction === "outbound") {
+    const reason = "recent_outbound_message_already_sent";
+    console.log("Limited auto-reply decision:", {
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+    });
+
+    await recordAutoReplyLog({
+      conversationId,
+      inboundMessageId: inboundMessageId ?? null,
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+      raw_payload: { lastMessage },
+    });
+
+    return {
+      sent: false,
+      decision: "skipped",
+      reason,
+    };
+  }
+
+  const latestInboundResult = await db.query(
+    `
+    select
+      id,
+      direction,
+      created_at
+    from messages
+    where conversation_id = $1
+      and direction = 'inbound'
+    order by created_at desc
+    limit 1
+    `,
+    [conversationId]
+  );
+
+  const latestInboundMessage = latestInboundResult.rows[0] as
+    | {
+        id: string;
+        direction: string;
+        created_at: string;
+      }
+    | undefined;
+
+  const providedInboundMessage = isMessageUuid(inboundMessageId)
+    ? (
+        await db.query(
+          `
+          select id, direction, message_type, content, created_at
+          from messages
+          where id = $1
+          limit 1
+          `,
+          [inboundMessageId]
+        )
+      ).rows[0] as
+        | {
+            id: string;
+            direction: string;
+            message_type: string | null;
+            content: string | null;
+            created_at: string;
+          }
+        | undefined
+    : undefined;
+
+  const targetInboundMessage =
+    providedInboundMessage?.direction === "inbound"
+      ? providedInboundMessage
+      : latestInboundMessage
+        ? (
+            await db.query(
+              `
+              select id, direction, message_type, content, created_at
+              from messages
+              where id = $1
+              limit 1
+              `,
+              [latestInboundMessage.id]
+            )
+          ).rows[0]
+        : undefined;
+
+  const targetInboundId =
+    targetInboundMessage?.direction === "inbound"
+      ? targetInboundMessage.id
+      : null;
+
+  if (
+    targetInboundId &&
+    (await db.query(
+      `
+      select id
+      from auto_reply_logs
+      where message_id = $1
+        and decision = 'sent'
+      limit 1
+      `,
+      [targetInboundId]
+    )).rows[0]
+  ) {
+    const reason = "inbound_already_auto_replied";
+    console.log("Limited auto-reply decision:", {
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+    });
+
+    await recordAutoReplyLog({
+      conversationId,
+      inboundMessageId: targetInboundId,
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+      raw_payload: { targetInboundId },
+    });
+
+    return {
+      sent: false,
+      decision: "skipped",
+      reason,
+    };
+  }
+
+  const effectiveInboundMessage = targetInboundMessage ?? lastMessage;
+
+  if (!effectiveInboundMessage || !isTextMessageType(effectiveInboundMessage.message_type)) {
     const reason = "last_inbound_not_text";
     console.log("Limited auto-reply decision:", {
       decision: "skipped",
@@ -637,7 +776,7 @@ export async function handleLimitedAutoReply({
 
     await recordAutoReplyLog({
       conversationId,
-      inboundMessageId: inboundMessageId ?? lastMessage.id,
+      inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
       detected_intent: "media_received",
@@ -653,51 +792,7 @@ export async function handleLimitedAutoReply({
     };
   }
 
-  const recentOutboundResult = await db.query(
-    `
-    select id, created_at
-    from messages
-    where conversation_id = $1
-      and direction = 'outbound'
-    order by created_at desc
-    limit 1
-    `,
-    [conversationId]
-  );
-
-  const recentOutbound = recentOutboundResult.rows[0] as
-    | { id: string; created_at: string }
-    | undefined;
-
-  if (recentOutbound && isRecentOutboundMessage(recentOutbound.created_at)) {
-    const reason = "recent_outbound_message_already_sent";
-    console.log("Limited auto-reply decision:", {
-      decision: "skipped",
-      reason,
-      detected_intent: "unknown",
-      confidence: "low",
-      needs_human: true,
-    });
-
-    await recordAutoReplyLog({
-      conversationId,
-      inboundMessageId: inboundMessageId ?? lastMessage.id,
-      decision: "skipped",
-      reason,
-      detected_intent: "unknown",
-      confidence: "low",
-      needs_human: true,
-      raw_payload: { recentOutbound },
-    });
-
-    return {
-      sent: false,
-      decision: "skipped",
-      reason,
-    };
-  }
-
-  const lastInboundMessage = (lastMessage.content ?? "").trim();
+  const lastInboundMessage = (effectiveInboundMessage.content ?? "").trim();
 
   if (!lastInboundMessage) {
     const reason = "unexpected_error";
@@ -711,7 +806,7 @@ export async function handleLimitedAutoReply({
 
     await recordAutoReplyLog({
       conversationId,
-      inboundMessageId: inboundMessageId ?? lastMessage.id,
+      inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
       detected_intent: "unknown",
@@ -771,7 +866,7 @@ export async function handleLimitedAutoReply({
 
       await recordAutoReplyLog({
         conversationId,
-        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
         detected_intent: detectedIntent,
@@ -832,7 +927,7 @@ export async function handleLimitedAutoReply({
 
       await recordAutoReplyLog({
         conversationId,
-        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
         detected_intent: normalizedIntent,
@@ -911,7 +1006,7 @@ export async function handleLimitedAutoReply({
 
       await recordAutoReplyLog({
         conversationId,
-        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
         decision: "sent",
         reason: "auto_reply_conditions_met",
         detected_intent: normalizedIntent,
@@ -940,7 +1035,7 @@ export async function handleLimitedAutoReply({
 
       await recordAutoReplyLog({
         conversationId,
-        inboundMessageId: inboundMessageId ?? lastMessage.id,
+        inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
         decision: "error",
         reason,
         detected_intent: normalizedIntent,
@@ -970,7 +1065,7 @@ export async function handleLimitedAutoReply({
 
     await recordAutoReplyLog({
       conversationId,
-      inboundMessageId: inboundMessageId ?? lastMessage.id,
+      inboundMessageId: targetInboundId ?? inboundMessageId ?? lastMessage.id,
       decision: "error",
       reason,
       detected_intent: "unknown",

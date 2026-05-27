@@ -175,8 +175,8 @@ export default function ConversationMessages({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isNearBottomRef = useRef(true);
   const latestFingerprintRef = useRef(messagesFingerprint(initialMessages));
-  const initialScrollDoneRef = useRef(false);
   const latestServerTimeRef = useRef<string | null>(null);
+  const firstLoadRef = useRef(true);
 
   const liveLabel = useMemo(() => {
     if (status === "error") {
@@ -219,7 +219,7 @@ export default function ConversationMessages({
   useEffect(() => {
     const timer = window.setTimeout(() => {
       scrollToBottom("auto");
-      initialScrollDoneRef.current = true;
+      firstLoadRef.current = false;
     }, 50);
 
     return () => window.clearTimeout(timer);
@@ -257,7 +257,12 @@ export default function ConversationMessages({
           }
         );
 
-        const data = await response.json();
+        const data: {
+          success?: boolean;
+          messages?: ConversationMessage[];
+          server_time?: string;
+          error?: string;
+        } = await response.json();
 
         if (!response.ok || !data.success || !Array.isArray(data.messages)) {
           throw new Error(data.error || "Failed to load messages");
@@ -267,15 +272,48 @@ export default function ConversationMessages({
           return;
         }
 
-        const updated = updateMessages(data.messages);
+        const nextMessages: ConversationMessage[] = Array.isArray(data.messages)
+          ? data.messages
+          : [];
+        const previousMessages = messages;
+        const previousFingerprint = latestFingerprintRef.current;
+        const nextFingerprint = messagesFingerprint(nextMessages);
+        const updated = updateMessages(nextMessages);
         latestServerTimeRef.current = data.server_time ?? null;
         setLastUpdatedAt(new Date());
         setStatus("live");
 
-        if (updated) {
-          if (isNearBottomRef.current) {
-            scrollToBottom("auto");
-          } else {
+        if (updated || nextFingerprint !== previousFingerprint) {
+          const previousCount = previousMessages.length;
+          const nextCount = nextMessages.length;
+          const newInboundMessage = nextMessages.find(
+            (message: ConversationMessage, index: number) =>
+              message.direction === "inbound" &&
+              (index >= previousCount ||
+                previousMessages[index]?.id !== message.id ||
+                previousMessages[index]?.status !== message.status ||
+                previousMessages[index]?.delivery_status !==
+                  message.delivery_status ||
+                previousMessages[index]?.read_at !== message.read_at ||
+                previousMessages[index]?.delivered_at !== message.delivered_at)
+          );
+
+          const shouldAutoScroll =
+            firstLoadRef.current ||
+            isNearBottomRef.current ||
+            Boolean(newInboundMessage);
+
+          firstLoadRef.current = false;
+
+          if (shouldAutoScroll) {
+            requestAnimationFrame(() => {
+              scrollToBottom("smooth");
+            });
+            window.setTimeout(() => {
+              scrollToBottom("smooth");
+            }, 50);
+            setHasNewMessages(false);
+          } else if (nextCount > previousCount) {
             setHasNewMessages(true);
           }
         }
