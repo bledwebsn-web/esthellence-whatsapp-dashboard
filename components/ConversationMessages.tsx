@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ConversationMessage = {
   id: string;
+  conversation_id?: string;
   direction: "inbound" | "outbound" | string;
   message_type: string;
   sender_type: string | null;
   source_label: string | null;
   delivery_status: string | null;
   read_at: string | null;
+  delivered_at: string | null;
   content: string | null;
   whatsapp_message_id: string | null;
   status: string | null;
@@ -21,6 +23,14 @@ function formatDateTime(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatClock(value: Date) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(value);
 }
 
 function resolveMessageParty(message: ConversationMessage) {
@@ -82,6 +92,22 @@ function getWhatsappTickClass(status: string | null | undefined) {
   return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-600";
 }
 
+function messagesFingerprint(messages: ConversationMessage[]) {
+  return messages
+    .map(
+      (message) =>
+        [
+          message.id,
+          message.status ?? "",
+          message.delivery_status ?? "",
+          message.read_at ?? "",
+          message.delivered_at ?? "",
+          message.content ?? "",
+        ].join("|")
+    )
+    .join("::");
+}
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
@@ -132,36 +158,160 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   );
 }
 
+type ConversationMessagesProps = {
+  conversationId: string;
+  initialMessages: ConversationMessage[];
+};
+
 export default function ConversationMessages({
-  messages,
-}: {
-  messages: ConversationMessage[];
-}) {
+  conversationId,
+  initialMessages,
+}: ConversationMessagesProps) {
+  const [messages, setMessages] = useState(initialMessages);
+  const [status, setStatus] = useState<"live" | "syncing" | "error">("live");
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const isNearBottomRef = useRef(true);
+  const latestFingerprintRef = useRef(messagesFingerprint(initialMessages));
+  const initialScrollDoneRef = useRef(false);
+  const latestServerTimeRef = useRef<string | null>(null);
+
+  const liveLabel = useMemo(() => {
+    if (status === "error") {
+      return "Reconnexion…";
+    }
+
+    if (lastUpdatedAt) {
+      return `Actualisé à ${formatClock(lastUpdatedAt)}`;
+    }
+
+    return "Live";
+  }, [lastUpdatedAt, status]);
+
+  function scrollToBottom(behavior: ScrollBehavior = "smooth") {
+    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+  }
+
+  function isAtBottom() {
+    const container = containerRef.current;
+    if (!container) {
+      return true;
+    }
+
+    const distance =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distance < 120;
+  }
+
+  function updateMessages(nextMessages: ConversationMessage[]) {
+    const nextFingerprint = messagesFingerprint(nextMessages);
+    if (nextFingerprint === latestFingerprintRef.current) {
+      return false;
+    }
+
+    latestFingerprintRef.current = nextFingerprint;
+    setMessages(nextMessages);
+    return true;
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
-      containerRef.current?.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: "auto",
-      });
+      scrollToBottom("auto");
+      initialScrollDoneRef.current = true;
     }, 50);
 
     return () => window.clearTimeout(timer);
-  }, [messages]);
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    function handleScroll() {
+      isNearBottomRef.current = isAtBottom();
+      if (isNearBottomRef.current) {
+        setHasNewMessages(false);
+      }
+    }
+
+    handleScroll();
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshMessages() {
+      try {
+        setStatus((current) => (current === "error" ? "syncing" : current));
+
+        const response = await fetch(
+          `/api/conversations/${conversationId}/messages`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success || !Array.isArray(data.messages)) {
+          throw new Error(data.error || "Failed to load messages");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const updated = updateMessages(data.messages);
+        latestServerTimeRef.current = data.server_time ?? null;
+        setLastUpdatedAt(new Date());
+        setStatus("live");
+
+        if (updated) {
+          if (isNearBottomRef.current) {
+            scrollToBottom("auto");
+          } else {
+            setHasNewMessages(true);
+          }
+        }
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setStatus("error");
+      }
+    }
+
+    void refreshMessages();
+    const interval = window.setInterval(() => {
+      void refreshMessages();
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [conversationId]);
 
   return (
     <div className="relative h-full overflow-hidden">
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto px-8 py-6 pr-6"
-        style={{
-          scrollbarWidth: "thin",
-          scrollbarColor: "rgba(148,163,184,0.35) transparent",
-        }}
+        className="h-full overflow-y-auto px-8 py-6 pr-6 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
+        <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500">
+          <span>{liveLabel}</span>
+          {latestServerTimeRef.current ? (
+            <span>Serveur {new Date(latestServerTimeRef.current).toLocaleTimeString("fr-FR")}</span>
+          ) : null}
+        </div>
+
         <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
@@ -176,15 +326,35 @@ export default function ConversationMessages({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-        }
-        className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
-      >
-        Dernier message ↓
-      </button>
+      {hasNewMessages && !isNearBottomRef.current ? (
+        <button
+          type="button"
+          onClick={() => {
+            scrollToBottom("smooth");
+            setHasNewMessages(false);
+          }}
+          className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
+        >
+          Nouveau message ↓
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            scrollToBottom("smooth");
+            setHasNewMessages(false);
+          }}
+          className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
+        >
+          Dernier message ↓
+        </button>
+      )}
+
+      {status === "error" ? (
+        <div className="absolute left-4 bottom-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
+          Dernière mise à jour échouée
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -21,6 +21,7 @@ type ConversationMessage = {
   source_label: string | null;
   delivery_status: string | null;
   read_at: string | null;
+  delivered_at: string | null;
   content: string | null;
   whatsapp_message_id: string | null;
   status: string | null;
@@ -169,6 +170,7 @@ export default async function ConversationDetailPage({
       source_label,
       delivery_status,
       read_at,
+      delivered_at,
       content,
       whatsapp_message_id,
       status,
@@ -366,11 +368,14 @@ export default async function ConversationDetailPage({
           </aside>
 
           <main className="min-w-0 flex-1 overflow-hidden">
-            <ConversationMessages messages={conversation.messages} />
+            <ConversationMessages
+              conversationId={conversation.id}
+              initialMessages={conversation.messages}
+            />
           </main>
         </div>
 
-        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-4 py-3 backdrop-blur">
+        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 backdrop-blur">
           <ManualReplyForm conversationId={conversation.id} />
         </footer>
       </div>
