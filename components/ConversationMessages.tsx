@@ -62,18 +62,18 @@ function getWhatsappTickClass(status: string | null | undefined) {
   const normalized = (status ?? "").trim().toLowerCase();
 
   if (normalized === "read") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-blue-900 font-semibold";
+    return "ml-1 rounded-full bg-[var(--app-panel-soft)] px-1 text-[11px] font-semibold text-[var(--app-tick-read)]";
   }
 
   if (normalized === "failed") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-red-700 font-semibold";
+    return "ml-1 rounded-full bg-[var(--app-panel-soft)] px-1 text-[11px] font-semibold text-[var(--app-tick-failed)]";
   }
 
   if (normalized === "delivered") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-700";
+    return "ml-1 rounded-full bg-[var(--app-panel-soft)] px-1 text-[11px] text-[var(--app-tick-delivered)]";
   }
 
-  return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-600";
+  return "ml-1 rounded-full bg-[var(--app-panel-soft)] px-1 text-[11px] text-[var(--app-tick-sent)]";
 }
 
 function messagesFingerprint(messages: ConversationMessage[]) {
@@ -100,20 +100,23 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[72%] rounded-3xl border px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] ${
+        className={`min-w-0 max-w-[88%] rounded-3xl border p-4 shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:max-w-[78%] lg:max-w-[72%] ${
           isInbound
-            ? "border-white/10 bg-white/[0.06] text-slate-100"
+            ? "border-[color:var(--app-inbound-border)] bg-[var(--app-inbound-bg)] text-[var(--app-fg)]"
             : isAiMessage
-              ? "border-cyan-300/30 bg-gradient-to-br from-cyan-300/95 via-cyan-400/95 to-cyan-500/90 text-slate-950"
-              : "border-cyan-300/30 bg-cyan-500/90 text-slate-950"
+              ? "border-[color:var(--app-accent-border)] bg-gradient-to-br from-cyan-300 via-cyan-400 to-cyan-500 text-[var(--app-outbound-text)]"
+              : "border-[color:var(--app-accent-border)] bg-[var(--app-outbound-bg)] text-[var(--app-outbound-text)]"
         }`}
       >
-        <div className="whitespace-pre-wrap text-[15px] leading-6">
+        <div className="whitespace-pre-wrap text-sm leading-6 sm:text-[15px]">
           {message.content || "Message sans contenu"}
         </div>
+
         <div
           className={`mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] ${
-            isInbound ? "justify-start text-slate-400" : "justify-end text-cyan-950/80"
+            isInbound
+              ? "justify-start text-[var(--app-muted)]"
+              : "justify-end text-slate-700/90 dark:text-cyan-950/80"
           }`}
         >
           {isInbound ? (
@@ -121,7 +124,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           ) : (
             <>
               {isAiMessage ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-slate-950">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--app-border)] bg-[var(--app-badge-bg)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--app-badge-text)]">
                   <img
                     src="/wabassist-badge.png"
                     alt="WABAssist"
@@ -130,7 +133,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   <span>WABAssist</span>
                 </span>
               ) : null}
-              <span className="text-slate-700/90">
+              <span className="text-slate-700/90 dark:text-cyan-950/80">
                 {formatDateTime(message.created_at)}
               </span>
               <span className={getWhatsappTickClass(whatsappStatus)}>
@@ -308,13 +311,13 @@ export default function ConversationMessages({
   }, [conversationId]);
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative h-full min-h-0 overflow-hidden bg-[var(--app-bg)] text-[var(--app-fg)]">
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
+        className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
         <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-28">
-          <div className="flex items-center justify-between text-[11px] text-slate-500/90">
+          <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
               {liveLabel}
@@ -326,9 +329,9 @@ export default function ConversationMessages({
             ) : null}
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-4 sm:space-y-5">
             {messages.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
+              <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-10 text-center text-sm text-[var(--app-muted)]">
                 Aucun message dans cette conversation.
               </div>
             ) : (
@@ -349,7 +352,7 @@ export default function ConversationMessages({
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-5 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 hover:shadow-[0_14px_36px_rgba(34,211,238,0.08)]"
+          className="absolute bottom-3 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-5 sm:h-12 sm:w-12"
         >
           <span className="relative flex h-full w-full items-center justify-center">
             <svg
@@ -372,7 +375,7 @@ export default function ConversationMessages({
       ) : null}
 
       {status === "error" ? (
-        <div className="absolute left-4 bottom-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
+        <div className="absolute bottom-4 left-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
           Dernière mise à jour échouée
         </div>
       ) : null}

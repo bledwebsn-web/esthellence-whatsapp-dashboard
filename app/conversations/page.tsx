@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getIntentDisplayLabel } from "@/lib/analyze-conversation";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ export default async function ConversationsPage() {
   const conversations = result.rows as Conversation[];
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -72,34 +73,37 @@ export default async function ConversationsPage() {
               <p className="text-sm font-medium uppercase tracking-[0.24em] text-cyan-300">
                 Esthellence WhatsApp
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--app-fg)] sm:text-4xl">
                 Conversations WhatsApp
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--app-muted)] sm:text-base">
                 Leads reçus depuis la campagne WhatsApp Ads Esthellence
               </p>
             </div>
 
-            <a
-              href="/api/export/leads.csv"
-              download="esthellence-leads.csv"
-              className="inline-flex items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-400/20 hover:text-white sm:self-start"
-            >
-              Exporter CSV
-            </a>
+            <div className="flex items-center gap-2 sm:self-start">
+              <ThemeToggle />
+              <a
+                href="/api/export/leads.csv"
+                download="esthellence-leads.csv"
+                className="inline-flex items-center justify-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+              >
+                Exporter CSV
+              </a>
+            </div>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl shadow-cyan-950/20">
+        <div className="overflow-hidden rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel)] shadow-2xl shadow-cyan-950/20">
           {conversations.length === 0 ? (
-            <div className="px-6 py-16 text-center text-sm text-slate-300">
+            <div className="px-6 py-16 text-center text-sm text-[var(--app-muted)]">
               Aucune conversation pour le moment.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/10">
-                <thead className="bg-white/5">
-                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <table className="min-w-full divide-y divide-[color:var(--app-border)]">
+                <thead className="bg-[var(--app-panel-soft)]">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-muted)]">
                     <th className="px-6 py-4">Nom</th>
                     <th className="px-6 py-4">Numéro WhatsApp</th>
                     <th className="px-6 py-4">Dernier message</th>
@@ -111,21 +115,21 @@ export default async function ConversationsPage() {
                     <th className="px-6 py-4">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-[color:var(--app-border)]">
                   {conversations.map((conversation) => (
                     <tr
                       key={conversation.conversation_id}
-                      className="transition-colors hover:bg-white/5"
+                      className="transition-colors hover:bg-black/5"
                     >
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-white">
+                        <div className="text-sm font-medium text-[var(--app-fg)]">
                           {conversation.profile_name ?? "—"}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         {conversation.phone ?? conversation.wa_id}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         <div className="max-w-md truncate">
                           {conversation.last_message_preview ?? "—"}
                         </div>
@@ -135,19 +139,19 @@ export default async function ConversationsPage() {
                           {conversation.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         {conversation.ai_suggested_status ?? "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         {conversation.detected_language ?? "—"}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         {getIntentDisplayLabel(
                           conversation.detected_intent,
                           conversation.last_inbound_message_type
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-300">
+                      <td className="px-6 py-4 text-sm text-[var(--app-muted)]">
                         {formatDate(
                           conversation.last_message_at ?? conversation.created_at
                         )}
@@ -155,7 +159,7 @@ export default async function ConversationsPage() {
                       <td className="px-6 py-4">
                         <Link
                           href={`/conversations/${conversation.conversation_id}`}
-                          className="inline-flex items-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-400/20 hover:text-white"
+                          className="inline-flex items-center rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 hover:text-white"
                         >
                           Ouvrir
                         </Link>

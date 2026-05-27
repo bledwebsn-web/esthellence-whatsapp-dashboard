@@ -113,11 +113,11 @@ export default function ManualReplyForm({
   }
 
   return (
-    <div className="px-4 py-4 sm:px-6">
-      <div className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-white/[0.04] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+    <div className="px-3 py-3 sm:px-6 sm:py-4">
+      <div className="mx-auto w-full max-w-[980px] rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-composer)] p-3 shadow-[0_12px_30px_rgba(0,0,0,0.16)] backdrop-blur-md sm:rounded-3xl sm:p-4">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-medium text-slate-200">
+            <label className="text-sm font-medium text-[var(--app-fg)]">
               Réponse manuelle
             </label>
             <div className="flex items-center gap-2 text-xs">
@@ -129,7 +129,7 @@ export default function ManualReplyForm({
           <textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            className="min-h-[56px] max-h-[140px] w-full resize-y rounded-3xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/10 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
+            className="min-h-[48px] max-h-[96px] w-full resize-y rounded-2xl border border-[color:var(--app-input-border)] bg-[var(--app-input)] px-4 py-3 text-sm text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20 sm:min-h-[56px] sm:max-h-[140px]"
             placeholder="Écrire une réponse…"
             disabled={loading || suggesting}
           />
@@ -153,20 +153,20 @@ export default function ManualReplyForm({
           </div>
 
           {suggestionInfo ? (
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
+            <div className="rounded-2xl border border-[color:var(--app-border)] bg-black/20 px-3 py-2 text-xs leading-5 text-[var(--app-muted)]">
               <div>
                 Confiance :{" "}
-                <span className="text-slate-100">{suggestionInfo.confidence}</span>
+                <span className="text-[var(--app-fg)]">{suggestionInfo.confidence}</span>
               </div>
               <div>
                 Besoin humain :{" "}
-                <span className="text-slate-100">
+                <span className="text-[var(--app-fg)]">
                   {suggestionInfo.needs_human ? "Oui" : "Non"}
                 </span>
               </div>
               <div>
                 Raison :{" "}
-                <span className="text-slate-200">{suggestionInfo.reason}</span>
+                <span className="text-[var(--app-fg)]">{suggestionInfo.reason}</span>
               </div>
             </div>
           ) : null}

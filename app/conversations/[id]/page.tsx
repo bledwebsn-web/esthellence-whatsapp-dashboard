@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getAiSettings } from "@/lib/ai-settings";
 import {
   getMediaReviewLabel,
@@ -77,7 +78,7 @@ function SidebarRow({
       <span className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
         {label}
       </span>
-      <span className="max-w-[170px] text-right text-sm leading-5 text-slate-100">
+      <span className="max-w-[170px] text-right text-sm leading-5 text-[var(--app-fg)]">
         {value}
       </span>
     </div>
@@ -86,30 +87,30 @@ function SidebarRow({
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-medium text-white">{log.decision}</div>
-        <div className="text-[11px] text-slate-500">
+        <div className="text-sm font-medium text-[var(--app-fg)]">{log.decision}</div>
+        <div className="text-[11px] text-[var(--app-muted)]">
           {new Intl.DateTimeFormat("fr-FR", {
             dateStyle: "short",
             timeStyle: "short",
           }).format(new Date(log.created_at))}
         </div>
       </div>
-      <div className="mt-2 grid gap-1 text-xs text-slate-300">
+      <div className="mt-2 grid gap-1 text-xs text-[var(--app-muted)]">
         <div>
-          <span className="text-slate-500">Raison :</span> {formatField(log.reason)}
+          <span className="text-[var(--app-muted)]">Raison :</span> {formatField(log.reason)}
         </div>
         <div>
-          <span className="text-slate-500">Intention :</span>{" "}
+          <span className="text-[var(--app-muted)]">Intention :</span>{" "}
           {formatField(log.detected_intent)}
         </div>
         <div>
-          <span className="text-slate-500">Confidence :</span>{" "}
+          <span className="text-[var(--app-muted)]">Confidence :</span>{" "}
           {formatField(log.confidence)}
         </div>
         <div>
-          <span className="text-slate-500">Needs human :</span>{" "}
+          <span className="text-[var(--app-muted)]">Needs human :</span>{" "}
           {formatBoolean(log.needs_human)}
         </div>
       </div>
@@ -231,69 +232,79 @@ export default async function ConversationDetailPage({
   );
 
   return (
-    <main className="h-screen overflow-hidden bg-[#050509] text-slate-100">
+    <main className="h-screen overflow-hidden bg-[var(--app-bg)] text-[var(--app-fg)]">
       <div className="flex h-full min-h-0 flex-col">
-        <header className="shrink-0 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur-md sm:px-6">
-          <div className="flex h-16 items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link
-                href="/conversations"
-                className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                Retour
-              </Link>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-white">
+        <header className="shrink-0 border-b border-[color:var(--app-border)] bg-[var(--app-header)] px-4 backdrop-blur-md sm:px-6">
+          <div className="flex h-14 items-center gap-3 sm:h-16">
+            <Link
+              href="/conversations"
+              className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-3 py-1.5 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+            >
+              Retour
+            </Link>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="truncate text-sm font-semibold text-[var(--app-fg)] sm:text-base">
                   {conversation.contact.profile_name ?? "Contact inconnu"}
                 </div>
-                <div className="truncate text-xs text-slate-400">
+                <span className="hidden h-1 w-1 rounded-full bg-[var(--app-muted)] sm:inline-block" />
+                <div className="hidden min-w-0 truncate text-xs text-[var(--app-muted)] sm:block">
                   {conversation.contact.phone ?? conversation.contact.wa_id}
                 </div>
               </div>
+              <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[var(--app-muted)] sm:hidden">
+                <span className="truncate">
+                  {formatField(conversation.status)}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
-                {formatField(conversation.status)}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
-                {conversation.messages.length} messages
-              </span>
-              {limitedAutoReplyActive ? (
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-200">
-                  Auto-réponse active
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <div className="hidden items-center gap-2 text-xs text-[var(--app-muted)] sm:flex">
+                <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-2.5 py-1">
+                  {formatField(conversation.status)}
                 </span>
-              ) : (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-slate-300">
-                  Auto-réponse en pause
+                <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-2.5 py-1">
+                  {conversation.messages.length} messages
                 </span>
-              )}
+                {limitedAutoReplyActive ? (
+                  <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-200">
+                    Auto-réponse active
+                  </span>
+                ) : (
+                  <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-2.5 py-1 text-[var(--app-muted)]">
+                    Auto-réponse en pause
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-white/10 bg-white/[0.02] px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+          <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
             <div className="space-y-3">
-              <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
                   Contexte
                 </div>
                 <div className="space-y-1">
-                  <div className="text-base font-semibold text-white">
+                  <div className="text-base font-semibold text-[var(--app-fg)]">
                     {conversation.contact.profile_name ?? "Contact inconnu"}
                   </div>
-                  <div className="text-sm text-slate-300">
+                  <div className="text-sm text-[var(--app-muted)]">
                     {conversation.contact.phone ?? conversation.contact.wa_id}
                   </div>
                 </div>
-                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
                   <LeadStatusSelect
                     conversationId={conversation.id}
                     currentStatus={conversation.status}
                   />
                 </div>
-                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
                   <SidebarRow
                     label="Urgence"
                     value={formatField(conversation.urgency_level ?? "normal")}
@@ -313,23 +324,23 @@ export default async function ConversationDetailPage({
                 </div>
               </section>
 
-              <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
                     Résumé IA
                   </div>
                   <button
                     type="button"
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-200 transition hover:bg-white/[0.08]"
+                    className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
                   >
                     Régénérer
                   </button>
                 </div>
                 <details open className="group">
-                  <summary className="cursor-pointer list-none text-sm text-slate-400 transition hover:text-slate-200">
+                  <summary className="cursor-pointer list-none text-sm text-[var(--app-muted)] transition hover:text-[var(--app-fg)]">
                     Voir le résumé complet
                   </summary>
-                  <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
+                  <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 text-sm leading-6 text-[var(--app-fg)]">
                     <div className="whitespace-pre-line">
                       {conversation.ai_summary?.trim() ||
                         "Aucun résumé pour le moment."}
@@ -339,7 +350,7 @@ export default async function ConversationDetailPage({
               </section>
 
               {isMediaReceived && mediaReviewLabel ? (
-                <section className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
+                <section className="rounded-xl border border-amber-400/20 bg-[var(--app-warning-bg)] p-4 text-sm text-[var(--app-fg)]">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
                     Média reçu
                   </div>
@@ -347,13 +358,13 @@ export default async function ConversationDetailPage({
                 </section>
               ) : null}
 
-              <details className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-white">
+              <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--app-fg)]">
                   Décisions IA récentes
                 </summary>
                 <div className="mt-3 space-y-2">
                   {autoReplyLogs.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-sm text-slate-400">
+                    <div className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-4 text-sm text-[var(--app-muted)]">
                       Aucune décision auto-réponse pour le moment.
                     </div>
                   ) : (
@@ -367,6 +378,61 @@ export default async function ConversationDetailPage({
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="border-b border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 lg:hidden">
+              <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
+                <summary className="cursor-pointer list-none text-sm font-medium text-[var(--app-fg)]">
+                  Contexte lead
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-3">
+                    <LeadStatusSelect
+                      conversationId={conversation.id}
+                      currentStatus={conversation.status}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-[var(--app-muted)]">
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
+                      <div className="uppercase tracking-[0.18em]">Urgence</div>
+                      <div className="mt-1 text-[var(--app-fg)]">
+                        {formatField(conversation.urgency_level ?? "normal")}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
+                      <div className="uppercase tracking-[0.18em]">Langue</div>
+                      <div className="mt-1 text-[var(--app-fg)]">
+                        {formatField(conversation.detected_language)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 text-sm">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                      Résumé IA
+                    </div>
+                    <div className="mt-2 whitespace-pre-line leading-6 text-[var(--app-fg)]">
+                      {conversation.ai_summary?.trim() ||
+                        "Aucun résumé pour le moment."}
+                    </div>
+                  </div>
+                  <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
+                    <summary className="cursor-pointer list-none text-sm text-[var(--app-fg)]">
+                      Décisions IA récentes
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {autoReplyLogs.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-4 text-sm text-[var(--app-muted)]">
+                          Aucune décision auto-réponse pour le moment.
+                        </div>
+                      ) : (
+                        autoReplyLogs.map((log) => (
+                          <AutoReplyLogCard key={log.id} log={log} />
+                        ))
+                      )}
+                    </div>
+                  </details>
+                </div>
+              </details>
+            </div>
+
             <div className="flex min-h-0 flex-1 overflow-hidden">
               <ConversationMessages
                 conversationId={conversation.id}
@@ -374,7 +440,7 @@ export default async function ConversationDetailPage({
               />
             </div>
 
-            <footer className="shrink-0 border-t border-white/10 bg-[#050509]/95 backdrop-blur-md">
+            <footer className="shrink-0 border-t border-[color:var(--app-border)] bg-[var(--app-composer)] backdrop-blur-md">
               <ManualReplyForm conversationId={conversation.id} />
             </footer>
           </section>
