@@ -92,6 +92,8 @@ function messagesFingerprint(messages: ConversationMessage[]) {
     .join("::");
 }
 
+const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
@@ -126,7 +128,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               {isAiMessage ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[color:var(--app-border)] bg-[var(--app-badge-bg)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--app-badge-text)]">
                   <img
-                    src="/wabassist-badge.png"
+                    src={WABASSIST_BADGE_SRC}
                     alt="WABAssist"
                     className="h-3.5 w-3.5 rounded-full"
                   />
@@ -316,7 +318,7 @@ export default function ConversationMessages({
         ref={containerRef}
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[220px] sm:pb-[240px]">
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[250px] sm:pb-[280px]">
           <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
