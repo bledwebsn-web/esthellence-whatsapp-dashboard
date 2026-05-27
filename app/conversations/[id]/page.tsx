@@ -162,7 +162,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           {message.content || "Message sans contenu"}
         </div>
         <div
-          className={`mt-2 flex items-center justify-end gap-2 text-xs ${
+          className={`mt-1.5 flex items-center justify-end gap-1.5 text-[11px] ${
             isInbound ? "text-slate-400" : "text-cyan-950/70"
           }`}
         >
@@ -171,16 +171,16 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           ) : (
             <>
               {isAiMessage ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-medium text-slate-100">
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] font-medium text-slate-100">
                   <img
                     src="/wabassist-badge.png"
                     alt="WABAssist"
-                    className="h-4 w-4 rounded-full"
+                    className="h-3.5 w-3.5 rounded-full"
                   />
                   <span>WABAssist</span>
                 </span>
               ) : null}
-              <span>{formatDateTime(message.created_at)}</span>
+              <span className="text-slate-700/90">{formatDateTime(message.created_at)}</span>
               <span
                 className={getWhatsappTickClass(whatsappStatus)}
               >
