@@ -19,6 +19,7 @@ type ConversationMessage = {
   sender_type: string | null;
   source_label: string | null;
   delivery_status: string | null;
+  read_at: string | null;
   content: string | null;
   whatsapp_message_id: string | null;
   status: string | null;
@@ -131,10 +132,18 @@ function getWhatsappTickClass(status: string | null | undefined) {
   return "text-slate-400";
 }
 
+function getEffectiveDeliveryStatus(message: ConversationMessage) {
+  if (message.read_at) {
+    return "read";
+  }
+
+  return message.delivery_status || message.status || "sent";
+}
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
-  const whatsappStatus = message.delivery_status ?? message.status;
+  const whatsappStatus = getEffectiveDeliveryStatus(message);
 
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
@@ -263,6 +272,7 @@ export default async function ConversationDetailPage({
       sender_type,
       source_label,
       delivery_status,
+      read_at,
       content,
       whatsapp_message_id,
       status,

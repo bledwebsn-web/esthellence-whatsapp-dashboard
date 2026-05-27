@@ -159,25 +159,100 @@ export async function POST(request: Request) {
     if (Array.isArray(statuses) && statuses.length > 0) {
       for (const status of statuses) {
         const whatsappMessageId = status?.id ?? null;
-        const deliveryStatus = status?.status ?? null;
+        const incomingStatus = status?.status ?? null;
 
-        if (whatsappMessageId && deliveryStatus) {
-          await db.query(
+        if (whatsappMessageId && incomingStatus) {
+          const currentResult = await db.query(
             `
-            update messages
-            set
-              status = $2,
-              delivery_status = $2,
-              delivered_at = case when $2 = 'delivered' then now() else delivered_at end,
-              read_at = case when $2 = 'read' then now() else read_at end
+            select delivery_status, read_at, delivered_at
+            from messages
             where whatsapp_message_id = $1
+            limit 1
             `,
-            [whatsappMessageId, deliveryStatus]
+            [whatsappMessageId]
           );
+
+          const currentMessage = currentResult.rows[0] as
+            | {
+                delivery_status: string | null;
+                read_at: string | null;
+                delivered_at: string | null;
+              }
+            | undefined;
+
+          const currentDeliveryStatus = (currentMessage?.delivery_status ?? "")
+            .toLowerCase()
+            .trim();
+          const isAlreadyRead =
+            currentMessage?.read_at != null || currentDeliveryStatus === "read";
+          const incomingNormalized = incomingStatus.toLowerCase().trim();
+          let finalStatus = incomingNormalized;
+
+          if (isAlreadyRead) {
+            finalStatus = "read";
+          } else if (incomingNormalized === "read") {
+            finalStatus = "read";
+          } else if (incomingNormalized === "delivered") {
+            finalStatus = currentDeliveryStatus === "sent" ? "delivered" : "delivered";
+          } else if (incomingNormalized === "sent") {
+            finalStatus = currentDeliveryStatus === "failed" ? "failed" : "sent";
+          } else if (incomingNormalized === "failed") {
+            finalStatus = "failed";
+          }
+
+          if (finalStatus === "read") {
+            await db.query(
+              `
+              update messages
+              set
+                status = 'read',
+                delivery_status = 'read',
+                delivered_at = coalesce(delivered_at, now()),
+                read_at = now()
+              where whatsapp_message_id = $1
+              `,
+              [whatsappMessageId]
+            );
+          } else if (finalStatus === "delivered") {
+            await db.query(
+              `
+              update messages
+              set
+                status = 'delivered',
+                delivery_status = 'delivered',
+                delivered_at = now()
+              where whatsapp_message_id = $1
+              `,
+              [whatsappMessageId]
+            );
+          } else if (finalStatus === "sent") {
+            await db.query(
+              `
+              update messages
+              set
+                status = 'sent',
+                delivery_status = 'sent'
+              where whatsapp_message_id = $1
+              `,
+              [whatsappMessageId]
+            );
+          } else if (finalStatus === "failed") {
+            await db.query(
+              `
+              update messages
+              set
+                status = 'failed',
+                delivery_status = 'failed'
+              where whatsapp_message_id = $1
+              `,
+              [whatsappMessageId]
+            );
+          }
 
           console.log("WhatsApp message status updated:", {
             whatsappMessageId,
-            deliveryStatus,
+            incomingStatus,
+            finalStatus,
           });
         }
       }
