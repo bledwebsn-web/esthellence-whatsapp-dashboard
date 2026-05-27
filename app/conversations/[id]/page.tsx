@@ -122,14 +122,18 @@ function getWhatsappTickClass(status: string | null | undefined) {
   const normalized = (status ?? "").trim().toLowerCase();
 
   if (normalized === "read") {
-    return "text-cyan-300";
+    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-blue-950 font-semibold";
   }
 
   if (normalized === "failed") {
-    return "text-rose-300";
+    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-red-700 font-semibold";
   }
 
-  return "text-slate-400";
+  if (normalized === "delivered") {
+    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-700";
+  }
+
+  return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-600";
 }
 
 function getEffectiveDeliveryStatus(message: ConversationMessage) {
@@ -178,7 +182,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               ) : null}
               <span>{formatDateTime(message.created_at)}</span>
               <span
-                className={`font-medium ${getWhatsappTickClass(whatsappStatus)}`}
+                className={getWhatsappTickClass(whatsappStatus)}
               >
                 {getWhatsappTickLabel(whatsappStatus)}
               </span>
