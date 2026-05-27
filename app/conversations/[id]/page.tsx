@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import AiSummaryBox from "@/components/AiSummaryBox";
 import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
@@ -78,14 +77,16 @@ function SidebarRow({
       <span className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
         {label}
       </span>
-      <span className="max-w-[180px] text-right text-sm text-white">{value}</span>
+      <span className="max-w-[170px] text-right text-sm leading-5 text-slate-100">
+        {value}
+      </span>
     </div>
   );
 }
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-white">{log.decision}</div>
         <div className="text-[11px] text-slate-500">
@@ -230,14 +231,14 @@ export default async function ConversationDetailPage({
   );
 
   return (
-    <main className="h-screen overflow-hidden bg-[#050816] text-slate-100">
-      <div className="flex h-full flex-col">
-        <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-4 py-3 backdrop-blur">
-          <div className="flex h-12 items-center justify-between gap-4">
+    <main className="h-screen overflow-hidden bg-[#050509] text-slate-100">
+      <div className="flex h-full min-h-0 flex-col">
+        <header className="shrink-0 border-b border-white/10 bg-slate-950/90 px-4 backdrop-blur-md sm:px-6">
+          <div className="flex h-16 items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/conversations"
-                className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08] hover:text-white"
               >
                 Retour
               </Link>
@@ -252,18 +253,18 @@ export default async function ConversationDetailPage({
             </div>
 
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
                 {formatField(conversation.status)}
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
                 {conversation.messages.length} messages
               </span>
               {limitedAutoReplyActive ? (
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-200">
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-200">
                   Auto-réponse active
                 </span>
               ) : (
-                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-300">
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-slate-300">
                   Auto-réponse en pause
                 </span>
               )}
@@ -272,13 +273,11 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="w-[340px] shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/90 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]">
-            <div className="space-y-4">
-              <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
-                    Profil lead
-                  </div>
+          <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-white/10 bg-white/[0.02] px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+            <div className="space-y-3">
+              <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                  Contexte
                 </div>
                 <div className="space-y-1">
                   <div className="text-base font-semibold text-white">
@@ -288,13 +287,13 @@ export default async function ConversationDetailPage({
                     {conversation.contact.phone ?? conversation.contact.wa_id}
                   </div>
                 </div>
-                <div className="mt-3 rounded-xl border border-white/10 bg-slate-900/60 p-3">
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
                   <LeadStatusSelect
                     conversationId={conversation.id}
                     currentStatus={conversation.status}
                   />
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
                   <SidebarRow
                     label="Urgence"
                     value={formatField(conversation.urgency_level ?? "normal")}
@@ -314,23 +313,23 @@ export default async function ConversationDetailPage({
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
+              <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
                     Résumé IA
                   </div>
                   <button
                     type="button"
-                    className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:bg-white/10"
+                    className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-200 transition hover:bg-white/[0.08]"
                   >
                     Régénérer
                   </button>
                 </div>
                 <details open className="group">
-                  <summary className="cursor-pointer list-none text-sm text-slate-400">
-                    Voir résumé complet
+                  <summary className="cursor-pointer list-none text-sm text-slate-400 transition hover:text-slate-200">
+                    Voir le résumé complet
                   </summary>
-                  <div className="mt-3 max-h-48 overflow-hidden rounded-xl border border-white/10 bg-slate-950/40 p-3 text-sm leading-6 text-slate-200">
+                  <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-200">
                     <div className="whitespace-pre-line">
                       {conversation.ai_summary?.trim() ||
                         "Aucun résumé pour le moment."}
@@ -340,15 +339,15 @@ export default async function ConversationDetailPage({
               </section>
 
               {isMediaReceived && mediaReviewLabel ? (
-                <section className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50 shadow-sm">
+                <section className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
                     Média reçu
                   </div>
-                  <div className="mt-1">{mediaReviewLabel}</div>
+                  <div className="mt-1 leading-6">{mediaReviewLabel}</div>
                 </section>
               ) : null}
 
-              <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
+              <details className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-white">
                   Décisions IA récentes
                 </summary>
@@ -367,17 +366,19 @@ export default async function ConversationDetailPage({
             </div>
           </aside>
 
-          <main className="min-w-0 flex-1 overflow-hidden">
-            <ConversationMessages
-              conversationId={conversation.id}
-              initialMessages={conversation.messages}
-            />
-          </main>
-        </div>
+          <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <ConversationMessages
+                conversationId={conversation.id}
+                initialMessages={conversation.messages}
+              />
+            </div>
 
-        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 backdrop-blur">
-          <ManualReplyForm conversationId={conversation.id} />
-        </footer>
+            <footer className="shrink-0 border-t border-white/10 bg-[#050509]/95 backdrop-blur-md">
+              <ManualReplyForm conversationId={conversation.id} />
+            </footer>
+          </section>
+        </div>
       </div>
     </main>
   );

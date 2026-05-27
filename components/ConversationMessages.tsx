@@ -100,18 +100,20 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+        className={`max-w-[72%] rounded-3xl border px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] ${
           isInbound
-            ? "bg-slate-800 text-slate-100"
-            : "bg-cyan-500 text-slate-950"
+            ? "border-white/10 bg-white/[0.06] text-slate-100"
+            : isAiMessage
+              ? "border-cyan-300/30 bg-gradient-to-br from-cyan-300/95 via-cyan-400/95 to-cyan-500/90 text-slate-950"
+              : "border-cyan-300/30 bg-cyan-500/90 text-slate-950"
         }`}
       >
         <div className="whitespace-pre-wrap text-[15px] leading-6">
           {message.content || "Message sans contenu"}
         </div>
         <div
-          className={`mt-1.5 flex items-center justify-end gap-1.5 text-[11px] ${
-            isInbound ? "text-slate-400" : "text-cyan-950/70"
+          className={`mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] ${
+            isInbound ? "justify-start text-slate-400" : "justify-end text-cyan-950/80"
           }`}
         >
           {isInbound ? (
@@ -119,7 +121,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           ) : (
             <>
               {isAiMessage ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] font-medium text-slate-100">
+                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-slate-950">
                   <img
                     src="/wabassist-badge.png"
                     alt="WABAssist"
@@ -309,29 +311,33 @@ export default function ConversationMessages({
     <div className="relative h-full overflow-hidden">
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto px-8 py-6 pr-6 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
+        className="h-full overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500">
-          <span>{liveLabel}</span>
-          {latestServerTime ? (
-            <span>
-              Serveur{" "}
-              {new Date(latestServerTime).toLocaleTimeString("fr-FR")}
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-28">
+          <div className="flex items-center justify-between text-[11px] text-slate-500/90">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
+              {liveLabel}
             </span>
-          ) : null}
-        </div>
+            {latestServerTime ? (
+              <span>
+                Serveur {new Date(latestServerTime).toLocaleTimeString("fr-FR")}
+              </span>
+            ) : null}
+          </div>
 
-        <div className="space-y-4">
-          {messages.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
-              Aucun message dans cette conversation.
-            </div>
-          ) : (
-            messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
-            ))
-          )}
-          <div id="messages-bottom" ref={bottomRef} />
+          <div className="space-y-5">
+            {messages.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
+                Aucun message dans cette conversation.
+              </div>
+            ) : (
+              messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))
+            )}
+            <div id="messages-bottom" ref={bottomRef} />
+          </div>
         </div>
       </div>
 
@@ -343,7 +349,7 @@ export default function ConversationMessages({
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-4 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/80 text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition duration-200 hover:scale-105 hover:bg-slate-900 hover:shadow-white/10"
+          className="absolute bottom-5 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 hover:shadow-[0_14px_36px_rgba(34,211,238,0.08)]"
         >
           <span className="relative flex h-full w-full items-center justify-center">
             <svg

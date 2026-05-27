@@ -113,65 +113,65 @@ export default function ManualReplyForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full bg-slate-950/95 px-4 py-3"
-    >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <label className="text-sm font-medium text-slate-200">
-            Réponse manuelle
-          </label>
-          <div className="flex items-center gap-2 text-xs">
-            {success ? <p className="text-emerald-400">{success}</p> : null}
-            {error ? <p className="text-rose-400">{error}</p> : null}
-          </div>
-        </div>
-
-        <textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          className="min-h-[52px] max-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
-          placeholder="Écrire une réponse..."
-          disabled={loading || suggesting}
-        />
-
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleAiSuggestion}
-            disabled={suggesting || loading}
-            className="inline-flex items-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {suggesting ? "WABAssist écrit…" : "Réponse IA"}
-          </button>
-          <button
-            type="submit"
-            disabled={loading || !message.trim()}
-            className="inline-flex items-center rounded-lg bg-cyan-400 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Envoi..." : "Envoyer"}
-          </button>
-        </div>
-
-        {suggestionInfo ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300">
-            <div>
-              Confiance:{" "}
-              <span className="text-white">{suggestionInfo.confidence}</span>
-            </div>
-            <div>
-              Besoin humain:{" "}
-              <span className="text-white">
-                {suggestionInfo.needs_human ? "Oui" : "Non"}
-              </span>
-            </div>
-            <div>
-              Raison: <span className="text-slate-200">{suggestionInfo.reason}</span>
+    <div className="px-4 py-4 sm:px-6">
+      <div className="mx-auto w-full max-w-[980px] rounded-3xl border border-white/10 bg-white/[0.04] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-medium text-slate-200">
+              Réponse manuelle
+            </label>
+            <div className="flex items-center gap-2 text-xs">
+              {success ? <p className="text-emerald-400">{success}</p> : null}
+              {error ? <p className="text-rose-400">{error}</p> : null}
             </div>
           </div>
-        ) : null}
+
+          <textarea
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            className="min-h-[56px] max-h-[140px] w-full resize-y rounded-3xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 shadow-inner shadow-black/10 outline-none transition focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/20"
+            placeholder="Écrire une réponse…"
+            disabled={loading || suggesting}
+          />
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleAiSuggestion}
+              disabled={suggesting || loading}
+              className="inline-flex items-center rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {suggesting ? "WABAssist écrit…" : "Réponse IA"}
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !message.trim()}
+              className="inline-flex items-center rounded-full bg-cyan-400 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Envoi…" : "Envoyer"}
+            </button>
+          </div>
+
+          {suggestionInfo ? (
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
+              <div>
+                Confiance :{" "}
+                <span className="text-slate-100">{suggestionInfo.confidence}</span>
+              </div>
+              <div>
+                Besoin humain :{" "}
+                <span className="text-slate-100">
+                  {suggestionInfo.needs_human ? "Oui" : "Non"}
+                </span>
+              </div>
+              <div>
+                Raison :{" "}
+                <span className="text-slate-200">{suggestionInfo.reason}</span>
+              </div>
+            </div>
+          ) : null}
+        </form>
       </div>
-    </form>
+    </div>
   );
 }
