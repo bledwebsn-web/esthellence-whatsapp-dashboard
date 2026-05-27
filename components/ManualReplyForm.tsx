@@ -115,9 +115,9 @@ export default function ManualReplyForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full border-t border-white/10 bg-slate-950/95 px-4 py-3"
+      className="w-full bg-slate-950/95 px-4 py-3"
     >
-      <div className="flex flex-col gap-2">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <label className="text-sm font-medium text-slate-200">
             Réponse manuelle
@@ -131,7 +131,7 @@ export default function ManualReplyForm({
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          className="min-h-[56px] max-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none"
+          className="min-h-[52px] max-h-[110px] w-full resize-y rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
           placeholder="Écrire une réponse..."
           disabled={loading || suggesting}
         />
@@ -143,7 +143,7 @@ export default function ManualReplyForm({
             disabled={suggesting || loading}
             className="inline-flex items-center rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {suggesting ? "Génération..." : "Réponse IA"}
+            {suggesting ? "WABAssist écrit…" : "Réponse IA"}
           </button>
           <button
             type="submit"
@@ -155,7 +155,7 @@ export default function ManualReplyForm({
         </div>
 
         {suggestionInfo ? (
-          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-slate-300">
             <div>
               Confiance:{" "}
               <span className="text-white">{suggestionInfo.confidence}</span>

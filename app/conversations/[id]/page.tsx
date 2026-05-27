@@ -73,20 +73,18 @@ function SidebarRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5">
-      <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+    <div className="flex items-start justify-between gap-3 py-1.5">
+      <span className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
         {label}
       </span>
-      <span className="max-w-[180px] text-right text-sm text-slate-100">
-        {value}
-      </span>
+      <span className="max-w-[180px] text-right text-sm text-white">{value}</span>
     </div>
   );
 }
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-white">{log.decision}</div>
         <div className="text-[11px] text-slate-500">
@@ -230,10 +228,10 @@ export default async function ConversationDetailPage({
   );
 
   return (
-    <main className="h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <main className="h-screen overflow-hidden bg-[#050816] text-slate-100">
       <div className="flex h-full flex-col">
-        <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
+        <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-4 py-3 backdrop-blur">
+          <div className="flex h-12 items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/conversations"
@@ -272,56 +270,83 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/95 p-4">
+          <aside className="w-[340px] shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/90 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <LeadStatusSelect
-                  conversationId={conversation.id}
-                  currentStatus={conversation.status}
-                />
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
-                <SidebarRow
-                  label="Urgence"
-                  value={formatField(conversation.urgency_level ?? "normal")}
-                />
-                <SidebarRow
-                  label="Langue"
-                  value={formatField(conversation.detected_language)}
-                />
-                <SidebarRow
-                  label="Intention"
-                  value={formatField(conversation.detected_intent)}
-                />
-                <SidebarRow
-                  label="Statut IA"
-                  value={formatField(conversation.ai_suggested_status)}
-                />
-              </div>
-
-              <details open className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-white">
-                  Résumé IA
-                </summary>
-                <div className="mt-3 max-h-48 overflow-y-auto text-sm text-slate-300">
-                  <AiSummaryBox
+              <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                    Profil lead
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-base font-semibold text-white">
+                    {conversation.contact.profile_name ?? "Contact inconnu"}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    {conversation.contact.phone ?? conversation.contact.wa_id}
+                  </div>
+                </div>
+                <div className="mt-3 rounded-xl border border-white/10 bg-slate-900/60 p-3">
+                  <LeadStatusSelect
                     conversationId={conversation.id}
-                    initialSummary={conversation.ai_summary}
+                    currentStatus={conversation.status}
                   />
                 </div>
-              </details>
+                <div className="mt-3">
+                  <SidebarRow
+                    label="Urgence"
+                    value={formatField(conversation.urgency_level ?? "normal")}
+                  />
+                  <SidebarRow
+                    label="Langue"
+                    value={formatField(conversation.detected_language)}
+                  />
+                  <SidebarRow
+                    label="Intention"
+                    value={formatField(conversation.detected_intent)}
+                  />
+                  <SidebarRow
+                    label="Statut IA"
+                    value={formatField(conversation.ai_suggested_status)}
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                    Résumé IA
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-200 transition hover:bg-white/10"
+                  >
+                    Régénérer
+                  </button>
+                </div>
+                <details open className="group">
+                  <summary className="cursor-pointer list-none text-sm text-slate-400">
+                    Voir résumé complet
+                  </summary>
+                  <div className="mt-3 max-h-48 overflow-hidden rounded-xl border border-white/10 bg-slate-950/40 p-3 text-sm leading-6 text-slate-200">
+                    <div className="whitespace-pre-line">
+                      {conversation.ai_summary?.trim() ||
+                        "Aucun résumé pour le moment."}
+                    </div>
+                  </div>
+                </details>
+              </section>
 
               {isMediaReceived && mediaReviewLabel ? (
-                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-50">
+                <section className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50 shadow-sm">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
                     Média reçu
                   </div>
                   <div className="mt-1">{mediaReviewLabel}</div>
-                </div>
+                </section>
               ) : null}
 
-              <details className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+              <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-sm">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-white">
                   Décisions IA récentes
                 </summary>
@@ -345,7 +370,7 @@ export default async function ConversationDetailPage({
           </main>
         </div>
 
-        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-4 py-3">
+        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-4 py-3 backdrop-blur">
           <ManualReplyForm conversationId={conversation.id} />
         </footer>
       </div>

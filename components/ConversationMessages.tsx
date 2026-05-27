@@ -90,13 +90,13 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
+        className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
           isInbound
             ? "bg-slate-800 text-slate-100"
             : "bg-cyan-500 text-slate-950"
         }`}
       >
-        <div className="whitespace-pre-wrap text-sm leading-6">
+        <div className="whitespace-pre-wrap text-[15px] leading-6">
           {message.content || "Message sans contenu"}
         </div>
         <div
@@ -154,8 +154,15 @@ export default function ConversationMessages({
 
   return (
     <div className="relative h-full overflow-hidden">
-      <div ref={containerRef} className="h-full overflow-y-auto px-6 py-4 pr-4">
-        <div className="space-y-3">
+      <div
+        ref={containerRef}
+        className="h-full overflow-y-auto px-8 py-6 pr-6"
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(148,163,184,0.35) transparent",
+        }}
+      >
+        <div className="space-y-4">
           {messages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
               Aucun message dans cette conversation.
@@ -174,7 +181,7 @@ export default function ConversationMessages({
         onClick={() =>
           bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
         }
-        className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/85 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 transition hover:bg-slate-900"
+        className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
       >
         Dernier message ↓
       </button>
