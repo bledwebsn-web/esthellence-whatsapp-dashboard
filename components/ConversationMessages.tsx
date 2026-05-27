@@ -90,7 +90,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[72%] rounded-2xl px-4 py-3 shadow-sm ${
+        className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
           isInbound
             ? "bg-slate-800 text-slate-100"
             : "bg-cyan-500 text-slate-950"
@@ -141,18 +141,21 @@ export default function ConversationMessages({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    requestAnimationFrame(() => {
+    const timer = window.setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
       containerRef.current?.scrollTo({
         top: containerRef.current.scrollHeight,
         behavior: "auto",
       });
-    });
+    }, 50);
+
+    return () => window.clearTimeout(timer);
   }, [messages]);
 
   return (
     <div className="relative h-full overflow-hidden">
       <div ref={containerRef} className="h-full overflow-y-auto px-6 py-4 pr-4">
-        <div className="space-y-4">
+        <div className="space-y-3">
           {messages.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
               Aucun message dans cette conversation.

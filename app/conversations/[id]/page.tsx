@@ -55,13 +55,6 @@ type ConversationDetail = {
   messages: ConversationMessage[];
 };
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 function formatField(value: string | null | undefined) {
   return value && value.trim() ? value : "—";
 }
@@ -80,21 +73,28 @@ function SidebarRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2">
+    <div className="flex items-start justify-between gap-4 py-1.5">
       <span className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
         {label}
       </span>
-      <span className="text-right text-sm text-slate-100">{value}</span>
+      <span className="max-w-[180px] text-right text-sm text-slate-100">
+        {value}
+      </span>
     </div>
   );
 }
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+    <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-white">{log.decision}</div>
-        <div className="text-[11px] text-slate-500">{formatDateTime(log.created_at)}</div>
+        <div className="text-[11px] text-slate-500">
+          {new Intl.DateTimeFormat("fr-FR", {
+            dateStyle: "short",
+            timeStyle: "short",
+          }).format(new Date(log.created_at))}
+        </div>
       </div>
       <div className="mt-2 grid gap-1 text-xs text-slate-300">
         <div>
@@ -231,131 +231,123 @@ export default async function ConversationDetailPage({
 
   return (
     <main className="h-screen overflow-hidden bg-slate-950 text-slate-100">
-      <div className="grid h-full grid-cols-1 lg:grid-cols-[340px_1fr]">
-        <aside className="border-b border-white/10 bg-slate-950/95 p-4 lg:border-b-0 lg:border-r">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <Link
-              href="/conversations"
-              className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-            >
-              Retour
-            </Link>
-            {limitedAutoReplyActive ? (
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-medium text-emerald-200">
-                Auto-réponse active
-              </span>
-            ) : (
-              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-slate-300">
-                Auto-réponse en pause
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-4 overflow-y-auto pr-1">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-300">
-                Dossier conversation
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-                {conversation.contact.profile_name ?? "Contact inconnu"}
-              </h1>
-              <p className="mt-1 text-sm text-slate-300">
-                {conversation.contact.phone ?? conversation.contact.wa_id}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <SidebarRow
-                label="Statut"
-                value={
-                  <LeadStatusSelect
-                    conversationId={conversation.id}
-                    currentStatus={conversation.status}
-                  />
-                }
-              />
-              <SidebarRow
-                label="Urgence"
-                value={formatField(conversation.urgency_level ?? "normal")}
-              />
-              <SidebarRow
-                label="Langue"
-                value={formatField(conversation.detected_language)}
-              />
-              <SidebarRow
-                label="Intention"
-                value={formatField(conversation.detected_intent)}
-              />
-              <SidebarRow
-                label="Statut IA"
-                value={formatField(conversation.ai_suggested_status)}
-              />
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                Résumé IA
-              </div>
-              <AiSummaryBox
-                conversationId={conversation.id}
-                initialSummary={conversation.ai_summary}
-              />
-            </div>
-
-            {isMediaReceived && mediaReviewLabel ? (
-              <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-50">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
-                  Média reçu
-                </div>
-                <div className="mt-1">{mediaReviewLabel}</div>
-              </div>
-            ) : null}
-
-            <details className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-white">
-                Décisions IA récentes
-              </summary>
-              <div className="mt-3 space-y-2">
-                {autoReplyLogs.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-sm text-slate-400">
-                    Aucune décision auto-réponse pour le moment.
-                  </div>
-                ) : (
-                  autoReplyLogs.map((log) => (
-                    <AutoReplyLogCard key={log.id} log={log} />
-                  ))
-                )}
-              </div>
-            </details>
-          </div>
-        </aside>
-
-        <main className="flex h-full min-h-0 flex-col">
-          <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-5 py-4 backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-semibold text-white">
+      <div className="flex h-full flex-col">
+        <header className="shrink-0 border-b border-white/10 bg-slate-950/95 px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link
+                href="/conversations"
+                className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+              >
+                Retour
+              </Link>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-white">
                   {conversation.contact.profile_name ?? "Contact inconnu"}
-                </h2>
-                <p className="text-sm text-slate-400">
+                </div>
+                <div className="truncate text-xs text-slate-400">
                   {conversation.contact.phone ?? conversation.contact.wa_id}
-                </p>
-              </div>
-              <div className="text-right text-xs text-slate-400">
-                <div>{formatField(conversation.status)}</div>
-                <div>{conversation.messages.length} messages</div>
+                </div>
               </div>
             </div>
-          </header>
 
-          <section className="relative flex-1 min-h-0 overflow-hidden">
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">
+                {formatField(conversation.status)}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1">
+                {conversation.messages.length} messages
+              </span>
+              {limitedAutoReplyActive ? (
+                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-200">
+                  Auto-réponse active
+                </span>
+              ) : (
+                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-300">
+                  Auto-réponse en pause
+                </span>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-white/10 bg-slate-950/95 p-4">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <LeadStatusSelect
+                  conversationId={conversation.id}
+                  currentStatus={conversation.status}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+                <SidebarRow
+                  label="Urgence"
+                  value={formatField(conversation.urgency_level ?? "normal")}
+                />
+                <SidebarRow
+                  label="Langue"
+                  value={formatField(conversation.detected_language)}
+                />
+                <SidebarRow
+                  label="Intention"
+                  value={formatField(conversation.detected_intent)}
+                />
+                <SidebarRow
+                  label="Statut IA"
+                  value={formatField(conversation.ai_suggested_status)}
+                />
+              </div>
+
+              <details open className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-white">
+                  Résumé IA
+                </summary>
+                <div className="mt-3 max-h-48 overflow-y-auto text-sm text-slate-300">
+                  <AiSummaryBox
+                    conversationId={conversation.id}
+                    initialSummary={conversation.ai_summary}
+                  />
+                </div>
+              </details>
+
+              {isMediaReceived && mediaReviewLabel ? (
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-50">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
+                    Média reçu
+                  </div>
+                  <div className="mt-1">{mediaReviewLabel}</div>
+                </div>
+              ) : null}
+
+              <details className="rounded-2xl border border-white/10 bg-slate-900/60 p-3">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-white">
+                  Décisions IA récentes
+                </summary>
+                <div className="mt-3 space-y-2">
+                  {autoReplyLogs.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-white/10 px-3 py-4 text-sm text-slate-400">
+                      Aucune décision auto-réponse pour le moment.
+                    </div>
+                  ) : (
+                    autoReplyLogs.map((log) => (
+                      <AutoReplyLogCard key={log.id} log={log} />
+                    ))
+                  )}
+                </div>
+              </details>
+            </div>
+          </aside>
+
+          <main className="min-w-0 flex-1 overflow-hidden">
             <ConversationMessages messages={conversation.messages} />
-          </section>
+          </main>
+        </div>
 
-          <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-5 py-4 backdrop-blur">
-            <ManualReplyForm conversationId={conversation.id} />
-          </footer>
-        </main>
+        <footer className="shrink-0 border-t border-white/10 bg-slate-950/95 px-4 py-3">
+          <ManualReplyForm conversationId={conversation.id} />
+        </footer>
       </div>
     </main>
   );
