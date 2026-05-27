@@ -141,6 +141,7 @@ export async function POST(request: Request) {
 
     const phoneNumberId = value?.metadata?.phone_number_id ?? null;
     const messages = value?.messages ?? [];
+    const statuses = value?.statuses ?? [];
     const contact = value?.contacts?.[0];
 
     const eventResult = await db.query(
@@ -154,6 +155,39 @@ export async function POST(request: Request) {
     );
 
     const webhookEventId = eventResult.rows[0].id as string;
+
+    if (Array.isArray(statuses) && statuses.length > 0) {
+      for (const status of statuses) {
+        const whatsappMessageId = status?.id ?? null;
+        const deliveryStatus = status?.status ?? null;
+
+        if (whatsappMessageId && deliveryStatus) {
+          await db.query(
+            `
+            update messages
+            set
+              status = $2,
+              delivery_status = $2,
+              delivered_at = case when $2 = 'delivered' then now() else delivered_at end,
+              read_at = case when $2 = 'read' then now() else read_at end
+            where whatsapp_message_id = $1
+            `,
+            [whatsappMessageId, deliveryStatus]
+          );
+
+          console.log("WhatsApp message status updated:", {
+            whatsappMessageId,
+            deliveryStatus,
+          });
+        }
+      }
+
+      await db.query("update webhook_events set processed = true where id = $1", [
+        webhookEventId,
+      ]);
+
+      return Response.json({ received: true, status_updated: true });
+    }
 
     if (!messages.length) {
       return Response.json({ received: true, message_saved: false });
