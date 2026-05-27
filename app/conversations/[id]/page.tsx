@@ -22,6 +22,16 @@ type ConversationMessage = {
   created_at: string;
 };
 
+type AutoReplyLog = {
+  id: string;
+  decision: string;
+  reason: string;
+  detected_intent: string | null;
+  confidence: string | null;
+  needs_human: boolean | null;
+  created_at: string;
+};
+
 type ConversationDetail = {
   id: string;
   status: string;
@@ -51,6 +61,18 @@ function formatField(value: string | null | undefined) {
   return value && value.trim() ? value : "—";
 }
 
+function formatBoolean(value: boolean | null | undefined) {
+  if (value === true) {
+    return "oui";
+  }
+
+  if (value === false) {
+    return "non";
+  }
+
+  return "—";
+}
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
 
@@ -72,6 +94,36 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           }`}
         >
           {formatDateTime(message.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-white">{log.decision}</div>
+        <div className="text-xs text-slate-400">
+          {formatDateTime(log.created_at)}
+        </div>
+      </div>
+      <div className="mt-3 grid gap-2 text-sm text-slate-300">
+        <div>
+          <span className="text-slate-400">Raison :</span> {formatField(log.reason)}
+        </div>
+        <div>
+          <span className="text-slate-400">Intention :</span>{" "}
+          {formatField(log.detected_intent)}
+        </div>
+        <div>
+          <span className="text-slate-400">Confidence :</span>{" "}
+          {formatField(log.confidence)}
+        </div>
+        <div>
+          <span className="text-slate-400">Needs human :</span>{" "}
+          {formatBoolean(log.needs_human)}
         </div>
       </div>
     </div>
@@ -138,6 +190,24 @@ export default async function ConversationDetailPage({
     [id]
   );
 
+  const autoReplyLogsResult = await db.query(
+    `
+    select
+      id,
+      decision,
+      reason,
+      detected_intent,
+      confidence,
+      needs_human,
+      created_at
+    from auto_reply_logs
+    where conversation_id = $1
+    order by created_at desc
+    limit 10
+    `,
+    [id]
+  );
+
   const conversation: ConversationDetail = {
     id: conversationRow.id,
     status: conversationRow.status,
@@ -155,10 +225,10 @@ export default async function ConversationDetailPage({
     },
     messages: messagesResult.rows,
   };
+  const autoReplyLogs: AutoReplyLog[] = autoReplyLogsResult.rows;
   const aiSettings = await getAiSettings();
   const limitedAutoReplyActive =
-    aiSettings.mode === "limited_auto_reply" &&
-    aiSettings.auto_reply_enabled;
+    aiSettings.mode === "limited_auto_reply" && aiSettings.auto_reply_enabled;
   const mediaReviewLabel = getMediaReviewLabel(
     conversation.last_inbound_message_type
   );
@@ -279,6 +349,29 @@ export default async function ConversationDetailPage({
                     <MessageBubble key={message.id} message={message} />
                   ))
                 )}
+              </div>
+
+              <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/60 p-4 sm:p-6">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">
+                    Décisions auto-réponse IA
+                  </h2>
+                  <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-inset ring-white/10">
+                    {autoReplyLogs.length} logs
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {autoReplyLogs.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">
+                      Aucune décision auto-réponse pour le moment.
+                    </div>
+                  ) : (
+                    autoReplyLogs.map((log) => (
+                      <AutoReplyLogCard key={log.id} log={log} />
+                    ))
+                  )}
+                </div>
               </div>
 
               <ManualReplyForm conversationId={conversation.id} />
