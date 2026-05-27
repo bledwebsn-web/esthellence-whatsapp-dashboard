@@ -22,11 +22,11 @@ type LogAutoReplyAttemptParams = {
   inboundMessageId?: string | null;
   decision: AutoReplyDecision;
   reason: string;
-  detectedIntent?: string | null;
-  confidence?: "high" | "medium" | "low" | string | null;
-  needsHuman?: boolean | null;
+  detected_intent?: string | null;
+  confidence?: string | null;
+  needs_human?: boolean | null;
   reply?: string | null;
-  rawPayload?: unknown;
+  raw_payload?: unknown;
 };
 
 type ConversationContext = {
@@ -206,7 +206,7 @@ async function getDb() {
   return db;
 }
 
-async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
+async function recordAutoReplyLog(entry: LogAutoReplyAttemptParams) {
   try {
     const db = await getDb();
     const safeMessageId = isUuid(entry.inboundMessageId)
@@ -229,11 +229,11 @@ async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
         safeMessageId,
         entry.decision,
         entry.reason,
-        entry.detectedIntent ?? null,
+        entry.detected_intent ?? null,
         entry.confidence ?? null,
-        entry.needsHuman ?? null,
+        entry.needs_human ?? null,
         entry.reply ?? null,
-        entry.rawPayload ?? null,
+        entry.raw_payload ?? null,
       ]
     );
   } catch (error) {
@@ -406,15 +406,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId,
       decision: "skipped",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: settings,
+      needs_human: true,
+      raw_payload: settings,
     });
 
     return {
@@ -434,15 +434,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId,
       decision: "skipped",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: settings,
+      needs_human: true,
+      raw_payload: settings,
     });
 
     return {
@@ -473,15 +473,15 @@ export async function handleLimitedAutoReply({
 
   if (!conversation) {
     const error = new Error("Conversation not found");
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId,
       decision: "error",
       reason: "unexpected_error",
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: { error: error.message },
+      needs_human: true,
+      raw_payload: { error: error.message },
     });
     throw error;
   }
@@ -522,15 +522,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId,
       decision: "skipped",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: { lastMessage: lastMessage ?? null },
+      needs_human: true,
+      raw_payload: { lastMessage: lastMessage ?? null },
     });
 
     return {
@@ -550,15 +550,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
-      detectedIntent: "media_received",
+      detected_intent: "media_received",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: { lastMessage },
+      needs_human: true,
+      raw_payload: { lastMessage },
     });
 
     return {
@@ -594,15 +594,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: { recentOutbound },
+      needs_human: true,
+      raw_payload: { recentOutbound },
     });
 
     return {
@@ -624,15 +624,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "skipped",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: { lastMessage },
+      needs_human: true,
+      raw_payload: { lastMessage },
     });
 
     return {
@@ -684,15 +684,15 @@ export async function handleLimitedAutoReply({
         needs_human: true,
       });
 
-      await logAutoReplyAttempt({
+      await recordAutoReplyLog({
         conversationId,
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
-        detectedIntent,
+        detected_intent: detectedIntent,
         confidence: "low",
-        needsHuman: true,
-        rawPayload: suggestionResult,
+        needs_human: true,
+        raw_payload: suggestionResult,
       });
 
       return {
@@ -745,16 +745,16 @@ export async function handleLimitedAutoReply({
         needs_human: suggestion.needs_human,
       });
 
-      await logAutoReplyAttempt({
+      await recordAutoReplyLog({
         conversationId,
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "skipped",
         reason,
-        detectedIntent: normalizedIntent,
+        detected_intent: normalizedIntent,
         confidence: suggestion.confidence,
-        needsHuman: suggestion.needs_human,
+        needs_human: suggestion.needs_human,
         reply: normalizedReply,
-        rawPayload: suggestion,
+        raw_payload: suggestion,
       });
 
       return {
@@ -821,22 +821,22 @@ export async function handleLimitedAutoReply({
         needs_human: suggestion.needs_human,
       });
 
-      await logAutoReplyAttempt({
+      await recordAutoReplyLog({
         conversationId,
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "sent",
-        reason,
-        detectedIntent: normalizedIntent,
+        reason: "auto_reply_conditions_met",
+        detected_intent: normalizedIntent,
         confidence: suggestion.confidence,
-        needsHuman: suggestion.needs_human,
+        needs_human: suggestion.needs_human,
         reply: normalizedReply,
-        rawPayload: metaPayload,
+        raw_payload: metaPayload,
       });
 
       return {
         sent: true,
         decision: "sent",
-        reason,
+        reason: "auto_reply_conditions_met",
       };
     } catch (error) {
       const reason = "send_error";
@@ -850,16 +850,16 @@ export async function handleLimitedAutoReply({
         needs_human: suggestion.needs_human,
       });
 
-      await logAutoReplyAttempt({
+      await recordAutoReplyLog({
         conversationId,
         inboundMessageId: inboundMessageId ?? lastMessage.id,
         decision: "error",
         reason,
-        detectedIntent: normalizedIntent,
+        detected_intent: normalizedIntent,
         confidence: suggestion.confidence,
-        needsHuman: suggestion.needs_human,
+        needs_human: suggestion.needs_human,
         reply: normalizedReply,
-        rawPayload: error,
+        raw_payload: error,
       });
 
       return {
@@ -880,15 +880,15 @@ export async function handleLimitedAutoReply({
       needs_human: true,
     });
 
-    await logAutoReplyAttempt({
+    await recordAutoReplyLog({
       conversationId,
       inboundMessageId: inboundMessageId ?? lastMessage.id,
       decision: "error",
       reason,
-      detectedIntent: "unknown",
+      detected_intent: "unknown",
       confidence: "low",
-      needsHuman: true,
-      rawPayload: error,
+      needs_human: true,
+      raw_payload: error,
     });
 
     return {
