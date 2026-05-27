@@ -182,11 +182,12 @@ export async function POST(request: Request) {
       campaignId,
     });
 
-    await db.query(
+    const savedMessageResult = await db.query(
       `
       insert into messages
       (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload)
       values ($1, $2, $3, $4, $5, $6)
+      returning id
       `,
       [
         conversationId,
@@ -197,6 +198,7 @@ export async function POST(request: Request) {
         payload,
       ]
     );
+    const savedMessageId = savedMessageResult.rows[0]?.id as string | undefined;
 
     await db.query(
       `
@@ -216,17 +218,17 @@ export async function POST(request: Request) {
       console.error("Auto analysis failed:", error);
     });
 
-    if (conversationId && message.id) {
+    if (conversationId && savedMessageId) {
       void handleLimitedAutoReply({
         conversationId,
-        inboundMessageId: message.id,
+        inboundMessageId: savedMessageId,
       }).catch((error) => {
         console.error("Limited auto-reply failed:", error);
       });
 
       console.log("Limited auto-reply scheduled:", {
         conversationId,
-        inboundMessageId: message.id,
+        inboundMessageId: savedMessageId,
         messageType,
       });
     }

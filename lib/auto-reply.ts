@@ -84,6 +84,15 @@ function isTextMessageType(messageType: string | null | undefined) {
   return (messageType ?? "").toLowerCase() === "text";
 }
 
+function isUuid(value: string | undefined | null): boolean {
+  return (
+    !!value &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value
+    )
+  );
+}
+
 function hasUnsafePhrase(reply: string) {
   const normalizedReply = normalizeText(reply);
   return SAFE_AUTO_REPLY_PHRASES.some((phrase) =>
@@ -201,6 +210,15 @@ async function getDb() {
 async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
   try {
     const db = await getDb();
+    const safeMessageId = isUuid(entry.inboundMessageId)
+      ? entry.inboundMessageId
+      : null;
+
+    console.log("Auto-reply log message id:", {
+      inboundMessageId: entry.inboundMessageId,
+      safeMessageId,
+    });
+
     await db.query(
       `
       insert into auto_reply_logs
@@ -209,7 +227,7 @@ async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
       `,
       [
         entry.conversationId,
-        entry.messageId ?? entry.inboundMessageId ?? null,
+        safeMessageId,
         entry.decision,
         entry.reason,
         entry.detectedIntent ?? null,
