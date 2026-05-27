@@ -627,34 +627,6 @@ export async function handleLimitedAutoReply({
     };
   }
 
-  if (lastMessage.direction === "outbound") {
-    const reason = "recent_outbound_message_already_sent";
-    console.log("Limited auto-reply decision:", {
-      decision: "skipped",
-      reason,
-      detected_intent: "unknown",
-      confidence: "low",
-      needs_human: true,
-    });
-
-    await recordAutoReplyLog({
-      conversationId,
-      inboundMessageId: inboundMessageId ?? null,
-      decision: "skipped",
-      reason,
-      detected_intent: "unknown",
-      confidence: "low",
-      needs_human: true,
-      raw_payload: { lastMessage },
-    });
-
-    return {
-      sent: false,
-      decision: "skipped",
-      reason,
-    };
-  }
-
   const latestInboundResult = await db.query(
     `
     select
@@ -721,6 +693,64 @@ export async function handleLimitedAutoReply({
     targetInboundMessage?.direction === "inbound"
       ? targetInboundMessage.id
       : null;
+
+  const targetInboundCreatedAt = targetInboundMessage?.created_at
+    ? new Date(targetInboundMessage.created_at).getTime()
+    : null;
+
+  const lastOutboundResult = await db.query(
+    `
+    select id, created_at
+    from messages
+    where conversation_id = $1
+      and direction = 'outbound'
+    order by created_at desc
+    limit 1
+    `,
+    [conversationId]
+  );
+
+  const lastOutboundMessage = lastOutboundResult.rows[0] as
+    | { id: string; created_at: string }
+    | undefined;
+
+  const lastOutboundCreatedAt = lastOutboundMessage
+    ? new Date(lastOutboundMessage.created_at).getTime()
+    : null;
+
+  const shouldBlockForRecentOutbound =
+    lastMessage.direction === "outbound" &&
+    (!targetInboundCreatedAt ||
+      (lastOutboundCreatedAt !== null &&
+        targetInboundCreatedAt <= lastOutboundCreatedAt));
+
+  if (shouldBlockForRecentOutbound) {
+    const reason = "recent_outbound_message_already_sent";
+    console.log("Limited auto-reply decision:", {
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+    });
+
+    await recordAutoReplyLog({
+      conversationId,
+      inboundMessageId: targetInboundId ?? inboundMessageId ?? null,
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+      raw_payload: { lastMessage, lastOutboundMessage, targetInboundId },
+    });
+
+    return {
+      sent: false,
+      decision: "skipped",
+      reason,
+    };
+  }
 
   if (
     targetInboundId &&

@@ -37,40 +37,24 @@ function resolveMessageParty(message: ConversationMessage) {
   const sourceLabel = (message.source_label ?? "").trim();
   const senderType = (message.sender_type ?? "").trim().toLowerCase();
 
-  if (sourceLabel === "WABAssist") {
-    return "ai";
-  }
-
+  if (sourceLabel === "WABAssist") return "ai";
   if (senderType === "ai" || senderType === "human" || senderType === "lead") {
     return senderType;
   }
-
-  if (message.direction === "inbound") {
-    return "lead";
-  }
-
+  if (message.direction === "inbound") return "lead";
   return "human";
 }
 
 function getEffectiveDeliveryStatus(message: ConversationMessage) {
-  if (message.read_at) {
-    return "read";
-  }
-
+  if (message.read_at) return "read";
   return message.delivery_status || message.status || "sent";
 }
 
 function getWhatsappTickLabel(status: string | null | undefined) {
   const normalized = (status ?? "").trim().toLowerCase();
 
-  if (normalized === "delivered" || normalized === "read") {
-    return "✓✓";
-  }
-
-  if (normalized === "failed") {
-    return "échec";
-  }
-
+  if (normalized === "delivered" || normalized === "read") return "✓✓";
+  if (normalized === "failed") return "échec";
   return "✓";
 }
 
@@ -171,38 +155,29 @@ export default function ConversationMessages({
   const [status, setStatus] = useState<"live" | "syncing" | "error">("live");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [isBottomVisible, setIsBottomVisible] = useState(true);
+  const [latestServerTime, setLatestServerTime] = useState<string | null>(null);
+
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const isNearBottomRef = useRef(true);
+  const isBottomVisibleRef = useRef(true);
   const latestFingerprintRef = useRef(messagesFingerprint(initialMessages));
-  const latestServerTimeRef = useRef<string | null>(null);
+  const previousMessagesRef = useRef(initialMessages);
   const firstLoadRef = useRef(true);
 
   const liveLabel = useMemo(() => {
-    if (status === "error") {
-      return "Reconnexion…";
-    }
-
-    if (lastUpdatedAt) {
-      return `Actualisé à ${formatClock(lastUpdatedAt)}`;
-    }
-
+    if (status === "error") return "Reconnexion…";
+    if (lastUpdatedAt) return `Actualisé à ${formatClock(lastUpdatedAt)}`;
     return "Live";
   }, [lastUpdatedAt, status]);
 
   function scrollToBottom(behavior: ScrollBehavior = "smooth") {
-    bottomRef.current?.scrollIntoView({ behavior, block: "end" });
-  }
+    const run = () => {
+      bottomRef.current?.scrollIntoView({ behavior, block: "end" });
+    };
 
-  function isAtBottom() {
-    const container = containerRef.current;
-    if (!container) {
-      return true;
-    }
-
-    const distance =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
-    return distance < 120;
+    requestAnimationFrame(run);
+    window.setTimeout(run, 50);
   }
 
   function updateMessages(nextMessages: ConversationMessage[]) {
@@ -217,6 +192,13 @@ export default function ConversationMessages({
   }
 
   useEffect(() => {
+    isBottomVisibleRef.current = isBottomVisible;
+    if (isBottomVisible) {
+      setHasNewMessages(false);
+    }
+  }, [isBottomVisible]);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       scrollToBottom("auto");
       firstLoadRef.current = false;
@@ -227,20 +209,27 @@ export default function ConversationMessages({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
+    const bottom = bottomRef.current;
+
+    if (!container || !bottom || typeof IntersectionObserver === "undefined") {
       return;
     }
 
-    function handleScroll() {
-      isNearBottomRef.current = isAtBottom();
-      if (isNearBottomRef.current) {
-        setHasNewMessages(false);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        const visible = Boolean(entry?.isIntersecting && entry.intersectionRatio > 0.95);
+        setIsBottomVisible(visible);
+      },
+      {
+        root: container,
+        threshold: [0.95, 1],
       }
-    }
+    );
 
-    handleScroll();
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
+    observer.observe(bottom);
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -250,12 +239,9 @@ export default function ConversationMessages({
       try {
         setStatus((current) => (current === "error" ? "syncing" : current));
 
-        const response = await fetch(
-          `/api/conversations/${conversationId}/messages`,
-          {
-            cache: "no-store",
-          }
-        );
+        const response = await fetch(`/api/conversations/${conversationId}/messages`, {
+          cache: "no-store",
+        });
 
         const data: {
           success?: boolean;
@@ -268,60 +254,42 @@ export default function ConversationMessages({
           throw new Error(data.error || "Failed to load messages");
         }
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
-        const nextMessages: ConversationMessage[] = Array.isArray(data.messages)
-          ? data.messages
-          : [];
-        const previousMessages = messages;
+        const nextMessages: ConversationMessage[] = data.messages;
+        const previousMessages = previousMessagesRef.current;
         const previousFingerprint = latestFingerprintRef.current;
         const nextFingerprint = messagesFingerprint(nextMessages);
+        const hasChanged = nextFingerprint !== previousFingerprint;
         const updated = updateMessages(nextMessages);
-        latestServerTimeRef.current = data.server_time ?? null;
+        previousMessagesRef.current = nextMessages;
+        setLatestServerTime(data.server_time ?? null);
         setLastUpdatedAt(new Date());
         setStatus("live");
 
-        if (updated || nextFingerprint !== previousFingerprint) {
+        if (updated || hasChanged) {
           const previousCount = previousMessages.length;
           const nextCount = nextMessages.length;
-          const newInboundMessage = nextMessages.find(
-            (message: ConversationMessage, index: number) =>
-              message.direction === "inbound" &&
-              (index >= previousCount ||
-                previousMessages[index]?.id !== message.id ||
-                previousMessages[index]?.status !== message.status ||
-                previousMessages[index]?.delivery_status !==
-                  message.delivery_status ||
-                previousMessages[index]?.read_at !== message.read_at ||
-                previousMessages[index]?.delivered_at !== message.delivered_at)
-          );
+          const newestMessage = nextMessages[nextMessages.length - 1];
+          const newestIsNewInbound =
+            nextCount > previousCount && newestMessage?.direction === "inbound";
 
           const shouldAutoScroll =
             firstLoadRef.current ||
-            isNearBottomRef.current ||
-            Boolean(newInboundMessage);
+            isBottomVisibleRef.current ||
+            newestIsNewInbound;
 
           firstLoadRef.current = false;
 
           if (shouldAutoScroll) {
-            requestAnimationFrame(() => {
-              scrollToBottom("smooth");
-            });
-            window.setTimeout(() => {
-              scrollToBottom("smooth");
-            }, 50);
+            scrollToBottom("smooth");
             setHasNewMessages(false);
           } else if (nextCount > previousCount) {
             setHasNewMessages(true);
           }
         }
       } catch {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setStatus("error");
       }
     }
@@ -345,8 +313,11 @@ export default function ConversationMessages({
       >
         <div className="mb-4 flex items-center justify-between text-[11px] text-slate-500">
           <span>{liveLabel}</span>
-          {latestServerTimeRef.current ? (
-            <span>Serveur {new Date(latestServerTimeRef.current).toLocaleTimeString("fr-FR")}</span>
+          {latestServerTime ? (
+            <span>
+              Serveur{" "}
+              {new Date(latestServerTime).toLocaleTimeString("fr-FR")}
+            </span>
           ) : null}
         </div>
 
@@ -364,29 +335,35 @@ export default function ConversationMessages({
         </div>
       </div>
 
-      {hasNewMessages && !isNearBottomRef.current ? (
+      {!isBottomVisible ? (
         <button
           type="button"
+          aria-label="Aller au dernier message"
           onClick={() => {
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
+          className="absolute bottom-4 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full border border-white/10 bg-slate-950/80 text-slate-100 shadow-lg shadow-black/20 backdrop-blur-md transition duration-200 hover:scale-105 hover:bg-slate-900 hover:shadow-white/10"
         >
-          Nouveau message ↓
+          <span className="relative flex h-full w-full items-center justify-center">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              className="h-5 w-5"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 5v14" />
+              <path d="m6 13 6 6 6-6" />
+            </svg>
+            {hasNewMessages ? (
+              <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
+            ) : null}
+          </span>
         </button>
-      ) : (
-        <button
-          type="button"
-          onClick={() => {
-            scrollToBottom("smooth");
-            setHasNewMessages(false);
-          }}
-          className="absolute bottom-4 right-4 rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-medium text-slate-200 shadow-lg shadow-black/20 backdrop-blur transition hover:bg-slate-900"
-        >
-          Dernier message ↓
-        </button>
-      )}
+      ) : null}
 
       {status === "error" ? (
         <div className="absolute left-4 bottom-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
