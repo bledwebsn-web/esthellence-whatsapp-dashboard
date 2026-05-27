@@ -866,8 +866,8 @@ export async function handleLimitedAutoReply({
       await db.query(
         `
         insert into messages
-        (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload, status)
-        values ($1, $2, $3, $4, $5, $6, $7)
+        (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload, sender_type, source_label, delivery_status, status)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
         [
           conversationId,
@@ -876,6 +876,9 @@ export async function handleLimitedAutoReply({
           normalizedReply,
           metaMessageId,
           metaPayload,
+          "ai",
+          "WABAssist",
+          "sent",
           "sent",
         ]
       );
