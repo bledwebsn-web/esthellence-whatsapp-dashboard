@@ -222,20 +222,10 @@ async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
     await db.query(
       `
       insert into auto_reply_logs
-      (conversation_id, message_id, decision, reason, detected_intent, confidence, needs_human, reply, raw_payload, created_at)
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now())
+      (conversation_id, message_id, decision, reason, created_at)
+      values ($1, $2, $3, $4, now())
       `,
-      [
-        entry.conversationId,
-        safeMessageId,
-        entry.decision,
-        entry.reason,
-        entry.detectedIntent ?? null,
-        entry.confidence ?? null,
-        entry.needsHuman ?? null,
-        entry.reply ?? null,
-        entry.rawPayload === undefined ? null : JSON.stringify(entry.rawPayload),
-      ]
+      [entry.conversationId, safeMessageId, entry.decision, entry.reason]
     );
   } catch (error) {
     console.error("Failed to insert auto_reply_logs:", error, entry);
