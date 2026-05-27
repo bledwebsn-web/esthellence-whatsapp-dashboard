@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AiSummaryBox from "@/components/AiSummaryBox";
+import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm from "@/components/ManualReplyForm";
 import { getAiSettings } from "@/lib/ai-settings";
@@ -77,123 +78,6 @@ function formatBoolean(value: boolean | null | undefined) {
   return "—";
 }
 
-function resolveMessageParty(message: ConversationMessage) {
-  const sourceLabel = (message.source_label ?? "").trim();
-  const senderType = (message.sender_type ?? "").trim().toLowerCase();
-
-  if (sourceLabel === "WABAssist") {
-    return "ai";
-  }
-
-  if (senderType === "ai" || senderType === "human" || senderType === "lead") {
-    return senderType;
-  }
-
-  if (message.direction === "inbound") {
-    return "lead";
-  }
-
-  return "human";
-}
-
-function getWhatsappTickLabel(status: string | null | undefined) {
-  const normalized = (status ?? "").trim().toLowerCase();
-
-  if (normalized === "delivered") {
-    return "✓✓";
-  }
-
-  if (normalized === "read") {
-    return "✓✓";
-  }
-
-  if (normalized === "failed") {
-    return "échec";
-  }
-
-  if (normalized === "sent") {
-    return "✓";
-  }
-
-  return "✓";
-}
-
-function getWhatsappTickClass(status: string | null | undefined) {
-  const normalized = (status ?? "").trim().toLowerCase();
-
-  if (normalized === "read") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-blue-950 font-semibold";
-  }
-
-  if (normalized === "failed") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-red-700 font-semibold";
-  }
-
-  if (normalized === "delivered") {
-    return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-700";
-  }
-
-  return "ml-1 rounded-full bg-white/30 px-1 text-xs text-slate-600";
-}
-
-function getEffectiveDeliveryStatus(message: ConversationMessage) {
-  if (message.read_at) {
-    return "read";
-  }
-
-  return message.delivery_status || message.status || "sent";
-}
-
-function MessageBubble({ message }: { message: ConversationMessage }) {
-  const isInbound = message.direction === "inbound";
-  const isAiMessage = resolveMessageParty(message) === "ai";
-  const whatsappStatus = getEffectiveDeliveryStatus(message);
-
-  return (
-    <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-lg ${
-          isInbound
-            ? "bg-slate-800 text-slate-100"
-            : "bg-cyan-500 text-slate-950"
-        }`}
-      >
-        <div className="whitespace-pre-wrap text-sm leading-6">
-          {message.content || "Message sans contenu"}
-        </div>
-        <div
-          className={`mt-1.5 flex items-center justify-end gap-1.5 text-[11px] ${
-            isInbound ? "text-slate-400" : "text-cyan-950/70"
-          }`}
-        >
-          {isInbound ? (
-            <span>{formatDateTime(message.created_at)}</span>
-          ) : (
-            <>
-              {isAiMessage ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] font-medium text-slate-100">
-                  <img
-                    src="/wabassist-badge.png"
-                    alt="WABAssist"
-                    className="h-3.5 w-3.5 rounded-full"
-                  />
-                  <span>WABAssist</span>
-                </span>
-              ) : null}
-              <span className="text-slate-700/90">{formatDateTime(message.created_at)}</span>
-              <span
-                className={getWhatsappTickClass(whatsappStatus)}
-              >
-                {getWhatsappTickLabel(whatsappStatus)}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
@@ -230,6 +114,7 @@ export default async function ConversationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
   const conversationResult = await db.query(
     `
     select
@@ -323,6 +208,7 @@ export default async function ConversationDetailPage({
     },
     messages: messagesResult.rows,
   };
+
   const autoReplyLogs: AutoReplyLog[] = autoReplyLogsResult.rows;
   const aiSettings = await getAiSettings();
   const limitedAutoReplyActive =
@@ -427,41 +313,20 @@ export default async function ConversationDetailPage({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-slate-900/40 p-4 sm:p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
-                  Historique des messages
-                </h2>
-                <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300 ring-1 ring-inset ring-cyan-400/20">
-                  {conversation.messages.length} messages
-                </span>
+            <div className="flex min-h-0 flex-col gap-4">
+              <ConversationMessages messages={conversation.messages} />
+
+              <div className="sticky bottom-0 z-20 border-t border-white/10 bg-slate-950/95 pb-4 pt-4 backdrop-blur">
+                <ManualReplyForm conversationId={conversation.id} />
               </div>
 
-              <div className="space-y-4">
-                {conversation.messages.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
-                    Aucun message dans cette conversation.
-                  </div>
-                ) : (
-                  conversation.messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} />
-                  ))
-                )}
-              </div>
-
-              <div className="mt-8 rounded-3xl border border-white/10 bg-slate-900/60 p-4 sm:p-6">
-                <div className="mb-5 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-white">
-                    Décisions auto-réponse IA
-                  </h2>
-                  <span className="rounded-full bg-white/5 px-3 py-1 text-xs font-medium text-slate-300 ring-1 ring-inset ring-white/10">
-                    {autoReplyLogs.length} logs
-                  </span>
-                </div>
-
-                <div className="space-y-3">
+              <details className="rounded-3xl border border-white/10 bg-slate-900/60 p-4 sm:p-6">
+                <summary className="cursor-pointer list-none text-lg font-semibold text-white">
+                  Décisions auto-réponse IA
+                </summary>
+                <div className="mt-4 space-y-3">
                   {autoReplyLogs.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">
+                    <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center text-sm text-slate-400">
                       Aucune décision auto-réponse pour le moment.
                     </div>
                   ) : (
@@ -470,9 +335,7 @@ export default async function ConversationDetailPage({
                     ))
                   )}
                 </div>
-              </div>
-
-              <ManualReplyForm conversationId={conversation.id} />
+              </details>
             </div>
           </div>
         </section>
