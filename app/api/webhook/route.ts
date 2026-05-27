@@ -212,18 +212,24 @@ export async function POST(request: Request) {
       webhookEventId,
     ]);
 
-    void analyzeConversationInternal(conversationId)
-      .then(() =>
-        handleLimitedAutoReply({
-          conversationId,
-          inboundMessageId: message.id ?? undefined,
-        }).catch((error) => {
-          console.error("Limited auto-reply failed:", error);
-        })
-      )
-      .catch((error) => {
-        console.error("Auto analysis failed:", error);
+    void analyzeConversationInternal(conversationId).catch((error) => {
+      console.error("Auto analysis failed:", error);
+    });
+
+    if (conversationId && message.id) {
+      void handleLimitedAutoReply({
+        conversationId,
+        inboundMessageId: message.id,
+      }).catch((error) => {
+        console.error("Limited auto-reply failed:", error);
       });
+
+      console.log("Limited auto-reply scheduled:", {
+        conversationId,
+        inboundMessageId: message.id,
+        messageType,
+      });
+    }
 
     return Response.json({
       received: true,
