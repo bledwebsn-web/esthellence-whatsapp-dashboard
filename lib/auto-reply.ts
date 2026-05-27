@@ -16,6 +16,19 @@ type SuggestReplyResult = {
 
 type AutoReplyDecision = "sent" | "skipped" | "error";
 
+type LogAutoReplyAttemptParams = {
+  conversationId: string;
+  messageId?: string | null;
+  inboundMessageId?: string | null;
+  decision: AutoReplyDecision;
+  reason: string;
+  detectedIntent?: string | null;
+  confidence?: "high" | "medium" | "low" | null;
+  needsHuman?: boolean | null;
+  reply?: string | null;
+  rawPayload?: unknown;
+};
+
 type ConversationContext = {
   id: string;
   client_id: string;
@@ -185,29 +198,29 @@ async function getDb() {
   return db;
 }
 
-async function logAutoReplyAttempt(entry: {
-  conversationId: string;
-  inboundMessageId?: string;
-  decision: AutoReplyDecision;
-  reason: string;
-}) {
+async function logAutoReplyAttempt(entry: LogAutoReplyAttemptParams) {
   try {
     const db = await getDb();
     await db.query(
       `
       insert into auto_reply_logs
-      (conversation_id, inbound_message_id, decision, reason, created_at)
-      values ($1, $2, $3, $4, now())
+      (conversation_id, message_id, decision, reason, detected_intent, confidence, needs_human, reply, raw_payload, created_at)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now())
       `,
       [
         entry.conversationId,
-        entry.inboundMessageId ?? null,
+        entry.messageId ?? entry.inboundMessageId ?? null,
         entry.decision,
         entry.reason,
+        entry.detectedIntent ?? null,
+        entry.confidence ?? null,
+        entry.needsHuman ?? null,
+        entry.reply ?? null,
+        entry.rawPayload === undefined ? null : JSON.stringify(entry.rawPayload),
       ]
     );
   } catch (error) {
-    console.error("Failed to insert auto_reply_logs:", error);
+    console.error("Failed to insert auto_reply_logs:", error, entry);
   }
 }
 
