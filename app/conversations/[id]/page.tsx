@@ -286,7 +286,7 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+                    <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
             <div className="space-y-3">
               <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
@@ -300,18 +300,28 @@ export default async function ConversationDetailPage({
                     {conversation.contact.phone ?? conversation.contact.wa_id}
                   </div>
                   <div className="mt-2 inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
-                    {autoReplyEnabled
-                      ? "Auto-réponse active"
-                      : "Auto-réponse en pause"}
+                    {autoReplyEnabled ? "Auto-r�ponse active" : "Auto-r�ponse en pause"}
                   </div>
                 </div>
-                <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
+              </section>
+
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
+                <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                  Statut
+                </div>
+                <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
                   <LeadStatusSelect
                     conversationId={conversation.id}
                     currentStatus={conversation.status}
                   />
                 </div>
-                <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
+              </section>
+
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
+                <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                  Qualification
+                </div>
+                <div className="divide-y divide-[color:var(--app-border)] rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3">
                   <SidebarRow
                     label="Urgence"
                     value={formatField(conversation.urgency_level ?? "normal")}
@@ -333,7 +343,7 @@ export default async function ConversationDetailPage({
 
               <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
-                  Résumé IA
+                  R�sum� IA
                 </div>
                 <ConversationSummaryCard
                   conversationId={conversation.id}
@@ -346,7 +356,7 @@ export default async function ConversationDetailPage({
               {isMediaReceived && mediaReviewLabel ? (
                 <section className="rounded-xl border border-amber-400/20 bg-[var(--app-warning-bg)] p-4 text-sm text-[var(--app-fg)]">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
-                    Média reçu
+                    M�dia re�u
                   </div>
                   <div className="mt-1 leading-6">{mediaReviewLabel}</div>
                 </section>
@@ -354,12 +364,12 @@ export default async function ConversationDetailPage({
 
               <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-[var(--app-fg)]">
-                  Décisions IA récentes
+                  D�cisions IA r�centes
                 </summary>
                 <div className="mt-3 space-y-2">
                   {autoReplyLogs.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-4 text-sm text-[var(--app-muted)]">
-                      Aucune décision auto-réponse pour le moment.
+                      Aucune d�cision auto-r�ponse pour le moment.
                     </div>
                   ) : (
                     autoReplyLogs.map((log) => (
@@ -457,3 +467,4 @@ export default async function ConversationDetailPage({
     </main>
   );
 }
+

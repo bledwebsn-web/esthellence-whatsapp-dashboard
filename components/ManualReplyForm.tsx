@@ -254,9 +254,6 @@ export default function ManualReplyForm({
           : nextValue;
 
       setAiEnabled(normalized);
-      setSuccess(
-        normalized ? "Auto-rÃ©ponse activÃ©e." : "Auto-rÃ©ponse dÃ©sactivÃ©e."
-      );
       router.refresh();
     } catch (toggleError) {
       setAiEnabled(previousValue);
@@ -567,24 +564,8 @@ export default function ManualReplyForm({
           )}
         </div>
 
-        {(loading || success || error || recording || toggleLoading) ? (
-          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[11px] text-[var(--app-muted)]">
-            <div className="min-h-[16px]">
-              {loading
-                ? recording
-                  ? "Enregistrement…"
-                  : "Envoi…"
-                : toggleLoading
-                  ? "Mise à jour WABAssist..."
-                  : success ?? error ?? ""}
-            </div>
-            {recording ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-[11px] text-rose-200">
-                <span className="h-2 w-2 rounded-full bg-rose-300 animate-pulse" />
-                Enregistrement…
-              </div>
-            ) : null}
-          </div>
+        {error ? (
+          <div className="mt-2 px-1 text-[11px] text-rose-200">{error}</div>
         ) : null}
       </div>
     </div>
