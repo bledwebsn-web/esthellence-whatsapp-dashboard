@@ -127,16 +127,18 @@ function MediaContent({ message }: { message: ConversationMessage }) {
     if (mediaUrl) {
       return (
         <div className="space-y-2">
-          <a href={mediaUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
-            <img
-              src={mediaUrl}
-              alt={message.media_filename ?? "Image WhatsApp"}
-              className={`w-full object-cover ${
-                messageType === "sticker" ? "max-h-[180px]" : "max-h-[360px]"
-              }`}
-              loading="lazy"
-            />
-          </a>
+            <a href={mediaUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
+              <img
+                src={mediaUrl}
+                alt={message.media_filename ?? "Image WhatsApp"}
+                className={`w-full object-contain ${
+                  messageType === "sticker"
+                    ? "max-h-[180px] sm:max-h-[200px]"
+                    : "max-h-[300px] sm:max-h-[360px]"
+                }`}
+                loading="lazy"
+              />
+            </a>
           {hasCaption ? (
             <div className="whitespace-pre-wrap text-sm leading-6">{content}</div>
           ) : null}
@@ -255,7 +257,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
           <video
             controls
             src={mediaUrl}
-            className="max-h-[360px] w-full rounded-2xl object-cover"
+            className="max-h-[300px] w-full rounded-2xl object-contain sm:max-h-[360px]"
           />
           {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
         </div>
@@ -497,7 +499,7 @@ export default function ConversationMessages({
         ref={containerRef}
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-[110px] sm:pb-[120px]">
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-48 sm:pb-40">
           <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
@@ -518,7 +520,7 @@ export default function ConversationMessages({
                 <MessageBubble key={message.id} message={message} />
               ))
             )}
-            <div id="messages-bottom" ref={bottomRef} />
+            <div id="messages-bottom" ref={bottomRef} className="h-28 sm:h-32" />
           </div>
         </div>
       </div>
@@ -531,7 +533,7 @@ export default function ConversationMessages({
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-4 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-5 sm:h-12 sm:w-12"
+          className="absolute bottom-32 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-28 sm:h-12 sm:w-12"
         >
           <span className="relative flex h-full w-full items-center justify-center">
             <svg
