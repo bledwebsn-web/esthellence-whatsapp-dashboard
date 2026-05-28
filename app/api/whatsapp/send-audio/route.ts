@@ -14,8 +14,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const MAX_AUDIO_SIZE_BYTES = 16 * 1024 * 1024;
 const execFileAsync = promisify(execFile);
+const MAX_AUDIO_SIZE_BYTES = 16 * 1024 * 1024;
+const MAX_SOURCE_AUDIO_BYTES = 32 * 1024 * 1024;
 
 const FINAL_AUDIO_MIME_TYPES = new Set([
   "audio/ogg",
@@ -35,6 +36,14 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   aac: "audio/aac",
   amr: "audio/amr",
   webm: "audio/webm",
+};
+
+type NormalizedAudio = {
+  buffer: Buffer;
+  mimeType: string;
+  fileName: string;
+  converted: boolean;
+  size: number;
 };
 
 function normalizeMimeType(value: string) {
@@ -64,7 +73,7 @@ function isWebmAudio(mimeType: string, fileName: string) {
 async function saveBufferToPublicUploads(params: {
   buffer: Buffer;
   mimeType: string;
-  fileName: string;
+  originalFileName: string;
 }) {
   const now = new Date();
   const year = String(now.getUTCFullYear());
@@ -73,7 +82,7 @@ async function saveBufferToPublicUploads(params: {
   const absoluteDir = path.join(process.cwd(), "public", relativeDir);
   const extension = getWhatsAppMediaExtension(params.mimeType, "audio");
   const safeBaseName =
-    sanitizeWhatsAppFileName(path.parse(params.fileName).name || "voice-message");
+    sanitizeWhatsAppFileName(path.parse(params.originalFileName).name || "voice-message");
   const savedFileName = `${safeBaseName}-${randomUUID()}.${extension}`;
   const absolutePath = path.join(absoluteDir, savedFileName);
   const mediaUrl = `/${path.posix.join(
@@ -91,14 +100,40 @@ async function saveBufferToPublicUploads(params: {
   };
 }
 
-async function convertWebmToOgg(inputBuffer: Buffer) {
+async function saveTempFile(buffer: Buffer, fileName: string) {
   const tempDir = path.join(os.tmpdir(), "esthellence-audio");
-  const baseName = `voice-${randomUUID()}`;
-  const inputPath = path.join(tempDir, `${baseName}.webm`);
-  const outputPath = path.join(tempDir, `${baseName}.ogg`);
-
   await mkdir(tempDir, { recursive: true });
-  await writeFile(inputPath, inputBuffer);
+  const tempPath = path.join(tempDir, `${randomUUID()}-${sanitizeWhatsAppFileName(fileName)}`);
+  await writeFile(tempPath, buffer);
+  return tempPath;
+}
+
+async function readBuffer(filePath: string) {
+  return readFile(filePath);
+}
+
+async function normalizeAudioForWhatsApp(params: {
+  buffer: Buffer;
+  mimeType: string;
+  fileName: string;
+}) : Promise<NormalizedAudio> {
+  const originalSize = params.buffer.length;
+  const originalMimeType = normalizeMimeType(params.mimeType);
+  const originalFileName = params.fileName;
+
+  if (FINAL_AUDIO_MIME_TYPES.has(originalMimeType) && originalSize <= MAX_AUDIO_SIZE_BYTES) {
+    return {
+      buffer: params.buffer,
+      mimeType: originalMimeType,
+      fileName: originalFileName,
+      converted: false,
+      size: originalSize,
+    };
+  }
+
+  const inputPath = await saveTempFile(params.buffer, originalFileName);
+  const tempDir = path.dirname(inputPath);
+  const outputPath = path.join(tempDir, `${randomUUID()}-${path.parse(originalFileName).name || "voice-message"}.ogg`);
 
   try {
     await execFileAsync("ffmpeg", [
@@ -112,16 +147,29 @@ async function convertWebmToOgg(inputBuffer: Buffer) {
       outputPath,
     ]);
 
-    const outputBuffer = await readFile(outputPath);
+    const outputBuffer = await readBuffer(outputPath);
+
+    console.log("Audio normalized for WhatsApp", {
+      originalMimeType,
+      originalSize,
+      finalMimeType: "audio/ogg",
+      finalSize: outputBuffer.length,
+      converted: true,
+    });
+
+    if (outputBuffer.length > MAX_AUDIO_SIZE_BYTES) {
+      throw new Error("Audio trop lourd pour WhatsApp après conversion.");
+    }
+
     return {
       buffer: outputBuffer,
       mimeType: "audio/ogg",
-      fileName: "voice-message.ogg",
-      tempInputPath: inputPath,
-      tempOutputPath: outputPath,
+      fileName: `${path.parse(originalFileName).name || "voice-message"}.ogg`,
+      converted: true,
+      size: outputBuffer.length,
     };
   } catch (error) {
-    console.error("Audio conversion failed:", error);
+    console.error("Audio normalization failed:", error);
     throw new Error("Conversion audio impossible. Vérifiez ffmpeg sur le serveur.");
   } finally {
     await rm(inputPath, { force: true }).catch(() => undefined);
@@ -178,11 +226,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (audio.size > MAX_AUDIO_SIZE_BYTES) {
+    if (audio.size > MAX_SOURCE_AUDIO_BYTES) {
       return Response.json(
         {
           success: false,
-          error: "File too large",
+          error: "Fichier trop lourd ou format non accepté par WhatsApp.",
         },
         { status: 413 }
       );
@@ -233,44 +281,42 @@ export async function POST(request: Request) {
     }
 
     const inferredMimeType = inferAudioMimeType(audio);
-    const shouldConvertFromWebm = isWebmAudio(inferredMimeType, audio.name);
-    const acceptedInputMimeType = shouldConvertFromWebm
-      ? true
-      : FINAL_AUDIO_MIME_TYPES.has(inferredMimeType);
+    const isWebm = isWebmAudio(inferredMimeType, audio.name);
 
-    if (!acceptedInputMimeType) {
+    if (!inferredMimeType) {
       return Response.json(
         {
           success: false,
           error:
-            "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/ogg;codecs=opus, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
+            "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
         },
         { status: 415 }
       );
     }
 
-    console.log("Sending audio", {
-      mimeType: inferredMimeType,
-      size: audio.size,
-    });
-
-    const originalBuffer = Buffer.from(await audio.arrayBuffer());
-    let finalBuffer = originalBuffer;
-    let finalMimeType = inferredMimeType || "audio/ogg";
-
-    if (shouldConvertFromWebm) {
-      const converted = await convertWebmToOgg(originalBuffer);
-      finalBuffer = converted.buffer;
-      finalMimeType = converted.mimeType;
-      console.log("Audio converted to ogg", {
-        inputMimeType: inferredMimeType,
-        outputMimeType: finalMimeType,
-      });
+    if (!isWebm && !FINAL_AUDIO_MIME_TYPES.has(inferredMimeType)) {
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
+        },
+        { status: 415 }
+      );
     }
 
+    console.log("Sending audio", { mimeType: inferredMimeType, size: audio.size });
+
+    const originalBuffer = Buffer.from(await audio.arrayBuffer());
+    const finalAudio = await normalizeAudioForWhatsApp({
+      buffer: originalBuffer,
+      mimeType: inferredMimeType,
+      fileName: audio.name || "voice-message",
+    });
+
     const uploadPayload = await uploadWhatsAppMedia(
-      new Blob([finalBuffer], { type: finalMimeType }),
-      finalMimeType
+      new Blob([finalAudio.buffer as unknown as BlobPart], { type: finalAudio.mimeType }),
+      finalAudio.mimeType
     );
     const mediaId = uploadPayload?.id ?? null;
 
@@ -293,13 +339,13 @@ export async function POST(request: Request) {
 
     try {
       const savedMedia = await saveBufferToPublicUploads({
-        buffer: finalBuffer,
-        mimeType: finalMimeType,
-        fileName: "voice-message.ogg",
+        buffer: finalAudio.buffer,
+        mimeType: finalAudio.mimeType,
+        originalFileName: finalAudio.fileName,
       });
 
       savedMediaUrl = savedMedia.mediaUrl;
-      savedMediaFilename = "voice-message.ogg";
+      savedMediaFilename = finalAudio.fileName;
       savedMediaSize = savedMedia.mediaSize;
     } catch (saveError) {
       console.error("Failed to save outbound audio locally:", saveError);
@@ -357,12 +403,17 @@ export async function POST(request: Request) {
         {
           upload: uploadPayload,
           send: messagePayload,
+          normalized_media: {
+            mimeType: finalAudio.mimeType,
+            size: finalAudio.size,
+            converted: finalAudio.converted,
+          },
         },
         mediaId,
         savedMediaUrl,
-        finalMimeType,
-        savedMediaFilename ?? "voice-message.ogg",
-        savedMediaSize,
+        finalAudio.mimeType,
+        savedMediaFilename ?? finalAudio.fileName,
+        savedMediaSize ?? finalAudio.size,
       ]
     );
 
@@ -385,9 +436,7 @@ export async function POST(request: Request) {
     console.error("Failed to send audio message:", error);
 
     const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to send audio message";
+      error instanceof Error ? error.message : "Failed to send audio message";
 
     return Response.json(
       {

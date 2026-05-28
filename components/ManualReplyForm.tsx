@@ -785,8 +785,8 @@ export default function ManualReplyForm({
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (hasText && !selectedFile) {
-        void handleTextSubmit();
+      if (canSend) {
+        void (selectedFile ? sendMediaFile(selectedFile) : handleTextSubmit());
       }
       return;
     }
@@ -929,7 +929,9 @@ export default function ManualReplyForm({
             <button
               type="button"
               aria-label="Envoyer le message"
-              onClick={() => void (hasAttachment ? sendMediaFile(selectedFile as File) : handleTextSubmit())}
+              onClick={() =>
+                void (selectedFile ? sendMediaFile(selectedFile) : handleTextSubmit())
+              }
               disabled={loading || !canSend}
               className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/10 text-[var(--app-fg)] shadow-[0_10px_28px_rgba(0,0,0,0.18)] transition hover:scale-105 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
