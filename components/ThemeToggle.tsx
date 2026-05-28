@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 type ThemeMode = "auto" | "light" | "dark";
 
@@ -11,15 +11,13 @@ function resolveSystemTheme() {
     return "dark" as const;
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function applyTheme(theme: "light" | "dark") {
   const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  root.classList.add(theme);
+  root.classList.toggle("dark", theme === "dark");
+  root.classList.toggle("light", theme === "light");
   root.style.colorScheme = theme;
 }
 
@@ -27,7 +25,7 @@ export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>("auto");
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setHydrated(true);
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);

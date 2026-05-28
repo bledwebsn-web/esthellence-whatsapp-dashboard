@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -18,26 +17,26 @@ export const metadata: Metadata = {
   description: "Dashboard conversationnel Esthellence",
 };
 
-const themeBootstrap = `
-(function () {
+const themeBootstrap = `(function () {
   try {
     var stored = localStorage.getItem('esthellence_theme');
     var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     var theme = stored === 'light' || stored === 'dark'
       ? stored
-      : (stored === 'auto' || !stored)
+      : stored === 'auto' || !stored
         ? (systemPrefersDark ? 'dark' : 'light')
         : 'dark';
     var root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
+    root.classList.toggle('dark', theme === 'dark');
+    root.classList.toggle('light', theme === 'light');
     root.style.colorScheme = theme;
   } catch (error) {
-    document.documentElement.classList.add('dark');
-    document.documentElement.style.colorScheme = 'dark';
+    var root = document.documentElement;
+    root.classList.add('dark');
+    root.classList.remove('light');
+    root.style.colorScheme = 'dark';
   }
-})();
-`;
+})();`;
 
 export default function RootLayout({
   children,
@@ -45,11 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="fr" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
         <style>{`
           :root {
@@ -126,9 +121,7 @@ export default function RootLayout({
             font-family: Arial, Helvetica, sans-serif;
           }
         `}</style>
-        <Script id="theme-bootstrap" strategy="beforeInteractive">
-          {themeBootstrap}
-        </Script>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
       <body className="min-h-full flex flex-col bg-[var(--app-bg)] text-[var(--app-fg)] font-sans">
         {children}

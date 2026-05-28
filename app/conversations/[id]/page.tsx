@@ -59,13 +59,13 @@ type ConversationDetail = {
 };
 
 function formatField(value: string | null | undefined) {
-  return value && value.trim() ? value : "Ã¢â‚¬â€";
+  return value && value.trim() ? value : "—";
 }
 
 function formatBoolean(value: boolean | null | undefined) {
   if (value === true) return "oui";
   if (value === false) return "non";
-  return "Ã¢â‚¬â€";
+  return "—";
 }
 
 function SidebarRow({
@@ -270,11 +270,11 @@ export default async function ConversationDetailPage({
                 </span>
                 {autoReplyEnabled ? (
                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-                    Auto-rÃ©ponse active
+                    Auto-réponse active
                   </span>
                 ) : (
                   <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">
-                    Auto-rÃ©ponse dÃ©sactivÃ©e
+                    Auto-réponse désactivée
                   </span>
                 )}
               </div>
@@ -283,9 +283,9 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-                              <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-slate-950 dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+                              <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] text-[var(--app-fg)] dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
             <div className="space-y-3">
-              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Lead
                 </div>
@@ -303,25 +303,25 @@ export default async function ConversationDetailPage({
                         : "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
                     }`}
                   >
-                    {autoReplyEnabled ? "Auto-rÃ©ponse active" : "Auto-rÃ©ponse dÃ©sactivÃ©e"}
+                    {autoReplyEnabled ? "Auto-réponse active" : "Auto-réponse désactivée"}
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Statut
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:!border-white/10 dark:!bg-slate-900">
+                <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 dark:!border-white/10 dark:!bg-slate-900">
                   <LeadStatusSelect conversationId={conversation.id} currentStatus={conversation.status} />
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Qualification
                 </div>
-                <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 px-3 dark:divide-white/10 dark:!border-white/10 dark:!bg-white/[0.03]">
+                <div className="divide-y divide-[color:var(--app-border)] rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 dark:divide-white/10 dark:!border-white/10 dark:!bg-white/[0.03]">
                   <SidebarRow label="Urgence" value={formatField(conversation.urgency_level ?? "normal")} />
                   <SidebarRow label="Langue" value={formatField(conversation.detected_language)} />
                   <SidebarRow label="Intention" value={formatField(conversation.detected_intent)} />
@@ -329,9 +329,9 @@ export default async function ConversationDetailPage({
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
+              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
-                  RÃ©sumÃ© IA
+                  Résumé IA
                 </div>
                 <ConversationSummaryCard conversationId={conversation.id} initialSummary={conversation.ai_summary} embedded showHeader={false} />
               </section>
@@ -339,20 +339,20 @@ export default async function ConversationDetailPage({
               {isMediaReceived && mediaReviewLabel ? (
                 <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-950 dark:border-amber-400/20 dark:bg-[var(--app-warning-bg)] dark:text-slate-100">
                   <div className="text-[11px] font-semibold tracking-[0.08em] text-amber-700 dark:text-amber-200">
-                    MÃ©dia reÃ§u
+                    Média reçu
                   </div>
                   <div className="mt-1 leading-6">{mediaReviewLabel}</div>
                 </section>
               ) : null}
 
-              <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
+              <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  DÃ©cisions IA rÃ©centes
+                  Décisions IA récentes
                 </summary>
                 <div className="mt-3 space-y-2">
                   {autoReplyLogs.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
-                      Aucune dÃ©cision auto-rÃ©ponse pour le moment.
+                    <div className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
+                      Aucune décision auto-réponse pour le moment.
                     </div>
                   ) : (
                     autoReplyLogs.map((log) => <AutoReplyLogCard key={log.id} log={log} />)
@@ -363,13 +363,13 @@ export default async function ConversationDetailPage({
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="border-b border-slate-200 dark:!border-white/10 bg-white dark:!bg-white/[0.04] px-4 py-3 lg:hidden">
-              <details className="rounded-xl border border-slate-200 dark:!border-white/10 bg-slate-50 dark:!bg-white/[0.03] px-3 py-2">
+            <div className="border-b border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 dark:!border-white/10 dark:!bg-white/[0.04] lg:hidden">
+              <details className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
                 <summary className="cursor-pointer list-none text-sm font-medium text-slate-950 dark:text-white">
                   Contexte lead
                 </summary>
                 <div className="mt-3 space-y-3">
-                  <div className="rounded-xl border border-slate-200 dark:!border-white/10 bg-white dark:!bg-white/[0.04] p-3">
+                  <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel)] dark:!bg-white/[0.04] p-3">
                     <LeadStatusSelect
                       conversationId={conversation.id}
                       currentStatus={conversation.status}
@@ -377,26 +377,26 @@ export default async function ConversationDetailPage({
                   </div>
                   <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
                     {autoReplyEnabled
-                      ? "Auto-rÃ©ponse active"
-                      : "Auto-rÃ©ponse dÃ©sactivÃ©e"}
+                      ? "Auto-réponse active"
+                      : "Auto-réponse désactivée"}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                    <div className="rounded-xl border border-slate-200 dark:!border-white/10 bg-slate-50 dark:!bg-white/[0.03] px-3 py-2">
+                    <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
                       <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Urgence</div>
                       <div className="mt-1 text-slate-950 dark:text-white">
                         {formatField(conversation.urgency_level ?? "normal")}
                       </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200 dark:!border-white/10 bg-slate-50 dark:!bg-white/[0.03] px-3 py-2">
+                    <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
                       <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Langue</div>
                       <div className="mt-1 text-slate-950 dark:text-white">
                         {formatField(conversation.detected_language)}
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 dark:!border-white/10 bg-slate-50 dark:!bg-white/[0.03] px-3 py-2 text-sm">
+                  <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2 text-sm">
                     <div className="text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
-                      RÃ©sumÃ© IA
+                      Résumé IA
                     </div>
                     <div className="mt-2">
                       <ConversationSummaryCard
@@ -407,14 +407,14 @@ export default async function ConversationDetailPage({
                       />
                     </div>
                   </div>
-                  <details className="rounded-xl border border-slate-200 dark:!border-white/10 bg-slate-50 dark:!bg-white/[0.03] px-3 py-2">
+                  <details className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
                     <summary className="cursor-pointer list-none text-sm text-slate-950 dark:text-white">
-                      DÃ©cisions IA rÃ©centes
+                      Décisions IA récentes
                     </summary>
                     <div className="mt-3 space-y-2">
                       {autoReplyLogs.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-slate-200 dark:border-white/10 px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
-                          Aucune dÃ©cision auto-rÃ©ponse pour le moment.
+                        <div className="rounded-xl border border-dashed border-[color:var(--app-border)] dark:border-white/10 px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          Aucune décision auto-réponse pour le moment.
                         </div>
                       ) : (
                         autoReplyLogs.map((log) => (
