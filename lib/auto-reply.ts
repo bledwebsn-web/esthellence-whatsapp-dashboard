@@ -33,6 +33,7 @@ type ConversationContext = {
   id: string;
   client_id: string;
   status: string;
+  auto_reply_enabled: boolean | null;
   wa_id: string;
   phone: string | null;
   profile_name: string | null;
@@ -541,6 +542,7 @@ export async function handleLimitedAutoReply({
       conversations.id,
       conversations.client_id,
       conversations.status,
+      conversations.auto_reply_enabled,
       contacts.wa_id,
       contacts.phone,
       contacts.profile_name
@@ -567,6 +569,36 @@ export async function handleLimitedAutoReply({
       raw_payload: { error: error.message },
     });
     throw error;
+  }
+
+  if (conversation.auto_reply_enabled === false) {
+    const reason = "conversation_auto_reply_disabled";
+    console.log("Limited auto-reply decision:", {
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+    });
+
+    await recordAutoReplyLog({
+      conversationId,
+      inboundMessageId: inboundMessageId ?? null,
+      decision: "skipped",
+      reason,
+      detected_intent: "unknown",
+      confidence: "low",
+      needs_human: true,
+      raw_payload: {
+        auto_reply_enabled: conversation.auto_reply_enabled,
+      },
+    });
+
+    return {
+      sent: false,
+      decision: "skipped",
+      reason,
+    };
   }
 
   const lastMessageResult = await db.query(

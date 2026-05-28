@@ -5,22 +5,149 @@ import { useRouter } from "next/navigation";
 
 type ManualReplyFormProps = {
   conversationId: string;
+  autoReplyEnabled?: boolean;
 };
 
-const AI_STORAGE_KEY = "wabassist-enabled";
 export const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
-
-function getStoredAiEnabled() {
-  if (typeof window === "undefined") return true;
-  return window.localStorage.getItem(AI_STORAGE_KEY) !== "false";
-}
 
 function supportsMimeType(mimeType: string) {
   return typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(mimeType);
 }
 
+function normalizeSummaryText(value: unknown) {
+  if (typeof value !== "string") {
+    return "Résumé indisponible. Relecture humaine recommandée.";
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed || trimmed === "[object Object]") {
+    return "Résumé indisponible. Relecture humaine recommandée.";
+  }
+
+  return trimmed;
+}
+
+type ConversationSummaryCardProps = {
+  conversationId: string;
+  initialSummary: string | null;
+  className?: string;
+  embedded?: boolean;
+  showHeader?: boolean;
+};
+
+export function ConversationSummaryCard({
+  conversationId,
+  initialSummary,
+  className,
+  embedded = false,
+  showHeader = true,
+}: ConversationSummaryCardProps) {
+  const router = useRouter();
+  const [summary, setSummary] = useState(normalizeSummaryText(initialSummary));
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSummary(normalizeSummaryText(initialSummary));
+  }, [initialSummary]);
+
+  async function handleRegenerateSummary() {
+    if (loadingSummary) return;
+
+    setLoadingSummary(true);
+    setSummaryError(null);
+
+    try {
+      const response = await fetch("/api/ai/summarize-conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: conversationId }),
+      });
+
+      const data: { success?: boolean; summary?: unknown; error?: string } =
+        await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Résumé indisponible. Réessayez ou relisez la conversation."
+        );
+      }
+
+      const nextSummary = normalizeSummaryText(data.summary);
+      setSummary(nextSummary);
+      router.refresh();
+    } catch (error) {
+      setSummaryError(
+        error instanceof Error
+          ? error.message
+          : "Résumé indisponible. Réessayez ou relisez la conversation."
+      );
+    } finally {
+      setLoadingSummary(false);
+    }
+  }
+
+  const summaryLines = summary.split(/\r?\n/).filter(Boolean);
+  const isLongSummary = summaryLines.length > 5 || summary.length > 420;
+
+  const content = (
+    <>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div
+          className={`text-[11px] uppercase tracking-[0.18em] text-cyan-200/70 ${
+            showHeader ? "" : "sr-only"
+          }`}
+        >
+          Résumé IA
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleRegenerateSummary()}
+          disabled={loadingSummary}
+          className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loadingSummary ? "Génération..." : "Régénérer"}
+        </button>
+      </div>
+
+      <div className="text-sm leading-6 text-[var(--app-fg)]">
+        {isLongSummary ? (
+          <details open className="group">
+            <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.18em] text-[var(--app-muted)] transition hover:text-[var(--app-fg)]">
+              Voir le résumé complet
+            </summary>
+            <div className="mt-3 whitespace-pre-line">{summary}</div>
+          </details>
+        ) : (
+          <div className="whitespace-pre-line">{summary}</div>
+        )}
+      </div>
+
+      {summaryError ? (
+        <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
+          {summaryError}
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className={className ?? ""}>{content}</div>;
+  }
+
+  return (
+    <section
+      className={`rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 ${className ?? ""}`}
+    >
+      {content}
+    </section>
+  );
+}
+
 export default function ManualReplyForm({
   conversationId,
+  autoReplyEnabled: initialAutoReplyEnabled = true,
 }: ManualReplyFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -32,7 +159,8 @@ export default function ManualReplyForm({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(Boolean(initialAutoReplyEnabled));
+  const [toggleLoading, setToggleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -40,16 +168,8 @@ export default function ManualReplyForm({
   const hasText = message.trim().length > 0;
 
   useEffect(() => {
-    setAiEnabled(getStoredAiEnabled());
-  }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(AI_STORAGE_KEY, String(aiEnabled));
-    } catch {
-      // ignore storage issues
-    }
-  }, [aiEnabled]);
+    setAiEnabled(Boolean(initialAutoReplyEnabled));
+  }, [initialAutoReplyEnabled]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -95,6 +215,58 @@ export default function ManualReplyForm({
           ? suggestionError.message
           : "Failed to generate AI suggestion"
       );
+    }
+  }
+
+  async function handleToggleAutoReply() {
+    if (loading || recording || toggleLoading) return;
+
+    const nextValue = !aiEnabled;
+    const previousValue = aiEnabled;
+    setToggleLoading(true);
+    setAiEnabled(nextValue);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(
+        `/api/conversations/${conversationId}/auto-reply`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ auto_reply_enabled: nextValue }),
+        }
+      );
+
+      const data: {
+        success?: boolean;
+        auto_reply_enabled?: boolean;
+        error?: string;
+      } = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to update auto-reply");
+      }
+
+      const normalized =
+        typeof data.auto_reply_enabled === "boolean"
+          ? data.auto_reply_enabled
+          : nextValue;
+
+      setAiEnabled(normalized);
+      setSuccess(
+        normalized ? "Auto-rÃ©ponse activÃ©e." : "Auto-rÃ©ponse dÃ©sactivÃ©e."
+      );
+      router.refresh();
+    } catch (toggleError) {
+      setAiEnabled(previousValue);
+      setError(
+        toggleError instanceof Error
+          ? toggleError.message
+          : "Failed to update auto-reply"
+      );
+    } finally {
+      setToggleLoading(false);
     }
   }
 
@@ -258,7 +430,7 @@ export default function ManualReplyForm({
         hasText ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
       }`}
     >
-      <div className="rounded-[26px] border border-white/10 bg-white/[0.07] p-2 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+      <div className="rounded-[28px] border border-white/10 bg-white/[0.07] px-2.5 py-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         {selectedFileName ? (
           <div className="mb-2 flex items-center gap-2 px-1">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-[var(--app-muted)]">
@@ -375,9 +547,12 @@ export default function ManualReplyForm({
                 type="button"
                 aria-label="Basculer WABAssist"
                 aria-pressed={aiEnabled}
-                onClick={() => setAiEnabled((current) => !current)}
-                className={`inline-flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border p-0 transition ${
-                  aiEnabled ? "border-emerald-400/40 bg-white/5" : "border-white/10 bg-white/5"
+                onClick={() => void handleToggleAutoReply()}
+                disabled={toggleLoading}
+                className={`inline-flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border p-0 transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                  aiEnabled
+                    ? "border-emerald-400/40 bg-white/5 shadow-[0_0_0_1px_rgba(74,222,128,0.08)]"
+                    : "border-white/10 bg-white/5"
                 }`}
               >
                 <img
@@ -392,14 +567,16 @@ export default function ManualReplyForm({
           )}
         </div>
 
-        {(loading || success || error || recording) ? (
+        {(loading || success || error || recording || toggleLoading) ? (
           <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[11px] text-[var(--app-muted)]">
             <div className="min-h-[16px]">
               {loading
                 ? recording
                   ? "Enregistrement…"
                   : "Envoi…"
-                : success ?? error ?? ""}
+                : toggleLoading
+                  ? "Mise à jour WABAssist..."
+                  : success ?? error ?? ""}
             </div>
             {recording ? (
               <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 text-[11px] text-rose-200">

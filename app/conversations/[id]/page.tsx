@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
-import ManualReplyForm from "@/components/ManualReplyForm";
+import ManualReplyForm, {
+  ConversationSummaryCard,
+} from "@/components/ManualReplyForm";
 import ThemeToggle from "@/components/ThemeToggle";
-import { getAiSettings } from "@/lib/ai-settings";
 import {
   getMediaReviewLabel,
   isNonTextMediaMessageType,
@@ -47,6 +48,7 @@ type ConversationDetail = {
   detected_language: string | null;
   ai_suggested_status: string | null;
   human_takeover: boolean | null;
+  auto_reply_enabled: boolean | null;
   last_inbound_message_type: string | null;
   contact: {
     profile_name: string | null;
@@ -74,7 +76,7 @@ function SidebarRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-1.5">
+    <div className="flex items-start justify-between gap-3 border-b border-[color:var(--app-border)] py-2 last:border-b-0">
       <span className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
         {label}
       </span>
@@ -136,6 +138,7 @@ export default async function ConversationDetailPage({
       conversations.detected_language,
       conversations.ai_suggested_status,
       conversations.human_takeover,
+      conversations.auto_reply_enabled,
       latest_inbound.last_inbound_message_type,
       contacts.profile_name,
       contacts.wa_id,
@@ -211,6 +214,7 @@ export default async function ConversationDetailPage({
     detected_language: conversationRow.detected_language,
     ai_suggested_status: conversationRow.ai_suggested_status,
     human_takeover: conversationRow.human_takeover,
+    auto_reply_enabled: conversationRow.auto_reply_enabled,
     last_inbound_message_type: conversationRow.last_inbound_message_type,
     contact: {
       profile_name: conversationRow.profile_name,
@@ -221,9 +225,7 @@ export default async function ConversationDetailPage({
   };
 
   const autoReplyLogs: AutoReplyLog[] = autoReplyLogsResult.rows;
-  const aiSettings = await getAiSettings();
-  const limitedAutoReplyActive =
-    aiSettings.mode === "limited_auto_reply" && aiSettings.auto_reply_enabled;
+  const autoReplyEnabled = conversation.auto_reply_enabled !== false;
   const mediaReviewLabel = getMediaReviewLabel(
     conversation.last_inbound_message_type
   );
@@ -269,7 +271,7 @@ export default async function ConversationDetailPage({
                 <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-2.5 py-1">
                   {conversation.messages.length} messages
                 </span>
-                {limitedAutoReplyActive ? (
+                {autoReplyEnabled ? (
                   <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-emerald-200">
                     Auto-réponse active
                   </span>
@@ -288,7 +290,7 @@ export default async function ConversationDetailPage({
             <div className="space-y-3">
               <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
                 <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
-                  Contexte
+                  Lead
                 </div>
                 <div className="space-y-1">
                   <div className="text-base font-semibold text-[var(--app-fg)]">
@@ -296,6 +298,11 @@ export default async function ConversationDetailPage({
                   </div>
                   <div className="text-sm text-[var(--app-muted)]">
                     {conversation.contact.phone ?? conversation.contact.wa_id}
+                  </div>
+                  <div className="mt-2 inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
+                    {autoReplyEnabled
+                      ? "Auto-réponse active"
+                      : "Auto-réponse en pause"}
                   </div>
                 </div>
                 <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3">
@@ -325,28 +332,15 @@ export default async function ConversationDetailPage({
               </section>
 
               <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
-                    Résumé IA
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
-                  >
-                    Régénérer
-                  </button>
+                <div className="mb-3 text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
+                  Résumé IA
                 </div>
-                <details open className="group">
-                  <summary className="cursor-pointer list-none text-sm text-[var(--app-muted)] transition hover:text-[var(--app-fg)]">
-                    Voir le résumé complet
-                  </summary>
-                  <div className="mt-3 rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 text-sm leading-6 text-[var(--app-fg)]">
-                    <div className="whitespace-pre-line">
-                      {conversation.ai_summary?.trim() ||
-                        "Aucun résumé pour le moment."}
-                    </div>
-                  </div>
-                </details>
+                <ConversationSummaryCard
+                  conversationId={conversation.id}
+                  initialSummary={conversation.ai_summary}
+                  embedded
+                  showHeader={false}
+                />
               </section>
 
               {isMediaReceived && mediaReviewLabel ? (
@@ -390,6 +384,11 @@ export default async function ConversationDetailPage({
                       currentStatus={conversation.status}
                     />
                   </div>
+                  <div className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
+                    {autoReplyEnabled
+                      ? "Auto-réponse active"
+                      : "Auto-réponse en pause"}
+                  </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-[var(--app-muted)]">
                     <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
                       <div className="uppercase tracking-[0.18em]">Urgence</div>
@@ -408,9 +407,13 @@ export default async function ConversationDetailPage({
                     <div className="text-[11px] uppercase tracking-[0.18em] text-cyan-200/70">
                       Résumé IA
                     </div>
-                    <div className="mt-2 whitespace-pre-line leading-6 text-[var(--app-fg)]">
-                      {conversation.ai_summary?.trim() ||
-                        "Aucun résumé pour le moment."}
+                    <div className="mt-2">
+                      <ConversationSummaryCard
+                        conversationId={conversation.id}
+                        initialSummary={conversation.ai_summary}
+                        embedded
+                        showHeader={false}
+                      />
                     </div>
                   </div>
                   <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2">
@@ -442,7 +445,10 @@ export default async function ConversationDetailPage({
 
             <footer className="pointer-events-none shrink-0 bg-transparent px-3 pb-3 sm:px-6 sm:pb-4">
               <div className="pointer-events-auto mx-auto w-full max-w-[920px]">
-                <ManualReplyForm conversationId={conversation.id} />
+                <ManualReplyForm
+                  conversationId={conversation.id}
+                  autoReplyEnabled={autoReplyEnabled}
+                />
               </div>
             </footer>
           </section>
