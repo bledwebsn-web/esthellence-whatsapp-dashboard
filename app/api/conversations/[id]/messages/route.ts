@@ -40,6 +40,11 @@ export async function GET(
         read_at,
         sender_type,
         source_label,
+        media_id,
+        media_url,
+        media_mime_type,
+        media_filename,
+        media_size,
         created_at
       from messages
       where conversation_id = $1
@@ -72,6 +77,11 @@ export async function GET(
         read_at: message.read_at,
         sender_type: senderType,
         source_label: message.source_label,
+        media_id: message.media_id,
+        media_url: message.media_url,
+        media_mime_type: message.media_mime_type,
+        media_filename: message.media_filename,
+        media_size: message.media_size,
         created_at: message.created_at,
       };
     });

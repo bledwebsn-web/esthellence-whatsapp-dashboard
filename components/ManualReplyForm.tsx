@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type ManualReplyFormProps = {
@@ -10,8 +10,36 @@ type ManualReplyFormProps = {
 
 export const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
 
+const MAX_MEDIA_SIZE_BYTES = 16 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES = [
+  "image/*",
+  "video/*",
+  "audio/*",
+  "application/pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".txt",
+].join(",");
+
+const PREFERRED_AUDIO_MIME_TYPES = [
+  "audio/ogg;codecs=opus",
+  "audio/ogg",
+];
+
 function supportsMimeType(mimeType: string) {
-  return typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(mimeType);
+  return (
+    typeof MediaRecorder !== "undefined" &&
+    typeof MediaRecorder.isTypeSupported === "function" &&
+    MediaRecorder.isTypeSupported(mimeType)
+  );
+}
+
+function pickAudioMimeType() {
+  return PREFERRED_AUDIO_MIME_TYPES.find((mimeType) => supportsMimeType(mimeType)) ?? null;
 }
 
 function normalizeSummaryText(value: unknown) {
@@ -95,7 +123,7 @@ export function ConversationSummaryCard({
     <>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div
-          className={`text-[11px] uppercase tracking-[0.18em] text-cyan-200/70 ${
+          className={`text-[11px] uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200 ${
             showHeader ? "" : "sr-only"
           }`}
         >
@@ -111,7 +139,7 @@ export function ConversationSummaryCard({
         </button>
       </div>
 
-      <div className="text-sm leading-6 text-[var(--app-fg)]">
+      <div className="text-sm leading-6 text-slate-800 dark:text-slate-100">
         {isLongSummary ? (
           <details open className="group">
             <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.18em] text-[var(--app-muted)] transition hover:text-[var(--app-fg)]">
@@ -162,10 +190,9 @@ export default function ManualReplyForm({
   const [aiEnabled, setAiEnabled] = useState(Boolean(initialAutoReplyEnabled));
   const [toggleLoading, setToggleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
-  const hasText = message.trim().length > 0;
+  const hasText = useMemo(() => message.trim().length > 0, [message]);
 
   useEffect(() => {
     setAiEnabled(Boolean(initialAutoReplyEnabled));
@@ -190,7 +217,6 @@ export default function ManualReplyForm({
     if (loading) return;
 
     setError(null);
-    setSuccess(null);
 
     try {
       const response = await fetch("/api/ai/suggest-reply", {
@@ -226,7 +252,6 @@ export default function ManualReplyForm({
     setToggleLoading(true);
     setAiEnabled(nextValue);
     setError(null);
-    setSuccess(null);
 
     try {
       const response = await fetch(
@@ -273,7 +298,6 @@ export default function ManualReplyForm({
 
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const response = await fetch("/api/whatsapp/send-message", {
@@ -293,7 +317,6 @@ export default function ManualReplyForm({
 
       setMessage("");
       setSelectedFileName(null);
-      setSuccess("Message envoyé.");
       router.refresh();
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (submitError) {
@@ -307,20 +330,82 @@ export default function ManualReplyForm({
     }
   }
 
+  async function sendMediaFile(file: File) {
+    if (loading || recording || toggleLoading) return;
+
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+      setError("Fichier trop volumineux. Limite MVP : 16 Mo.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSelectedFileName(file.name);
+
+    const caption = message.trim();
+
+    try {
+      const formData = new FormData();
+      formData.append("conversation_id", conversationId);
+      formData.append("file", file);
+      if (caption) {
+        formData.append("caption", caption);
+      }
+
+      const response = await fetch("/api/whatsapp/send-media", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to send media message");
+      }
+
+      setMessage("");
+      setSelectedFileName(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      router.refresh();
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    } catch (mediaError) {
+      setError(
+        mediaError instanceof Error
+          ? mediaError.message
+          : "Failed to send media message"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await sendMediaFile(file);
+  }
+
   async function startRecording() {
+    const selectedMimeType = pickAudioMimeType();
+
+    if (!selectedMimeType) {
+      setError(
+        "Votre navigateur enregistre en WebM, format non accepté par WhatsApp. Essayez depuis Chrome Android ou envoyez un fichier audio compatible."
+      );
+      return;
+    }
+
     try {
       setError(null);
-      setSuccess(null);
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
       mediaChunksRef.current = [];
 
-      const mimeType = supportsMimeType("audio/ogg;codecs=opus")
-        ? "audio/ogg;codecs=opus"
-        : "audio/webm";
-
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -341,18 +426,17 @@ export default function ManualReplyForm({
           return;
         }
 
-        const blob = new Blob(chunks, { type: mimeType });
-        const extension = mimeType.includes("ogg") ? "ogg" : "webm";
-        const file = new File([blob], `voice-message.${extension}`, {
-          type: mimeType,
+        const blob = new Blob(chunks, { type: selectedMimeType });
+        const file = new File([blob], "voice-message.ogg", {
+          type: "audio/ogg",
         });
-
-        const formData = new FormData();
-        formData.append("conversation_id", conversationId);
-        formData.append("audio", file);
 
         setLoading(true);
         try {
+          const formData = new FormData();
+          formData.append("conversation_id", conversationId);
+          formData.append("audio", file);
+
           const response = await fetch("/api/whatsapp/send-audio", {
             method: "POST",
             body: formData,
@@ -364,7 +448,6 @@ export default function ManualReplyForm({
             throw new Error(data.error || "Failed to send audio message");
           }
 
-          setSuccess("Message vocal envoyé.");
           router.refresh();
         } catch (audioError) {
           setError(
@@ -413,21 +496,13 @@ export default function ManualReplyForm({
     }
   }
 
-  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFileName(file.name);
-    console.info("Media attachment staged (upload not wired yet):", file);
-  }
-
   return (
     <div
-      className={`mx-auto w-full px-0 transition-all duration-300 sm:px-0 ${
+      className={`mx-auto w-full px-3 transition-all duration-300 sm:px-0 ${
         hasText ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
       }`}
     >
-      <div className="rounded-[28px] border border-white/10 bg-white/[0.07] px-2.5 py-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+      <div className="rounded-[28px] border border-white/10 bg-white/[0.07] px-2.5 py-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:bg-white/[0.07]">
         {selectedFileName ? (
           <div className="mb-2 flex items-center gap-2 px-1">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-[var(--app-muted)]">
@@ -442,7 +517,7 @@ export default function ManualReplyForm({
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept="image/*,video/*,audio/*,application/pdf"
+            accept={ACCEPTED_FILE_TYPES}
             onChange={handleFileSelect}
           />
 
@@ -451,7 +526,7 @@ export default function ManualReplyForm({
             aria-label="Ajouter un fichier"
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loading || recording}
+            disabled={loading || recording || toggleLoading}
           >
             <svg
               viewBox="0 0 24 24"
@@ -475,7 +550,7 @@ export default function ManualReplyForm({
               onKeyDown={handleKeyDown}
               rows={1}
               placeholder="Écrire un message..."
-              disabled={loading || recording}
+              disabled={loading || recording || toggleLoading}
               className="min-h-[40px] max-h-[88px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
             />
           </div>

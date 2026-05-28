@@ -10,43 +10,74 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const MAX_AUDIO_SIZE_BYTES = 16 * 1024 * 1024;
+const MAX_MEDIA_SIZE_BYTES = 16 * 1024 * 1024;
 
-function normalizeAudioMimeType(mimeType: string) {
+function getMetaRecipient(conversation: { wa_id: string | null; phone: string | null }) {
+  return conversation.wa_id || conversation.phone;
+}
+
+function resolveOutgoingMediaType(file: File) {
+  const mimeType = (file.type || "").toLowerCase();
+
+  if (mimeType.startsWith("image/")) {
+    return "image" as const;
+  }
+
+  if (mimeType.startsWith("video/")) {
+    return "video" as const;
+  }
+
+  if (mimeType.startsWith("audio/")) {
+    return "audio" as const;
+  }
+
+  return "document" as const;
+}
+
+function isAllowedDocumentMimeType(mimeType: string, fileName: string) {
   const normalized = mimeType.toLowerCase();
+  const lowerFileName = fileName.toLowerCase();
 
-  if (normalized.includes("webm")) {
-    return null;
-  }
+  const allowedMimeTypes = [
+    "application/pdf",
+    "text/plain",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ];
 
-  if (normalized.includes("audio/ogg")) {
-    return "audio/ogg";
-  }
+  const allowedExtensions = [
+    ".pdf",
+    ".txt",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+  ];
 
-  if (
-    normalized === "audio/mp4" ||
-    normalized === "audio/mpeg" ||
-    normalized === "audio/aac" ||
-    normalized === "audio/amr" ||
-    normalized === "audio/opus"
-  ) {
-    return normalized;
-  }
-
-  return null;
+  return (
+    allowedMimeTypes.includes(normalized) ||
+    allowedExtensions.some((extension) => lowerFileName.endsWith(extension))
+  );
 }
 
 async function saveBufferToPublicUploads(params: {
   buffer: Buffer;
   mimeType: string;
   baseName: string;
+  fallbackType: string;
 }) {
   const now = new Date();
   const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const relativeDir = path.join("uploads", "whatsapp", year, month);
   const absoluteDir = path.join(process.cwd(), "public", relativeDir);
-  const extension = getWhatsAppMediaExtension(params.mimeType, "audio");
+  const extension = getWhatsAppMediaExtension(params.mimeType, params.fallbackType);
   const safeBaseName = sanitizeWhatsAppFileName(params.baseName);
   const savedFileName = `${safeBaseName}.${extension}`;
   const absolutePath = path.join(absoluteDir, savedFileName);
@@ -70,39 +101,26 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const conversationId = String(formData.get("conversation_id") ?? "").trim();
-    const audio = formData.get("audio");
+    const file = formData.get("file");
+    const caption = String(formData.get("caption") ?? "").trim();
 
-    if (!conversationId || !(audio instanceof File) || audio.size === 0) {
+    if (!conversationId || !(file instanceof File) || file.size === 0) {
       return Response.json(
         {
           success: false,
-          error: "Failed to send audio message",
+          error: "Failed to send media message",
         },
         { status: 400 }
       );
     }
 
-    if (audio.size > MAX_AUDIO_SIZE_BYTES) {
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
       return Response.json(
         {
           success: false,
           error: "File too large",
         },
         { status: 413 }
-      );
-    }
-
-    const rawMimeType = (audio.type || "").toLowerCase();
-    const mimeType = normalizeAudioMimeType(rawMimeType);
-
-    if (!mimeType) {
-      return Response.json(
-        {
-          success: false,
-          error:
-            "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
-        },
-        { status: 415 }
       );
     }
 
@@ -128,13 +146,14 @@ export async function POST(request: Request) {
       return Response.json(
         {
           success: false,
-          error: "Failed to send audio message",
+          error: "Failed to send media message",
         },
         { status: 404 }
       );
     }
 
-    const recipient = conversation.wa_id || conversation.phone;
+    const recipient = getMetaRecipient(conversation);
+
     if (!recipient) {
       return Response.json(
         {
@@ -150,25 +169,59 @@ export async function POST(request: Request) {
       throw new Error("WHATSAPP_ACCESS_TOKEN is missing");
     }
 
-    console.log("Sending audio", { mimeType, size: audio.size });
+    const mimeType = file.type || "application/octet-stream";
+    const messageType = resolveOutgoingMediaType(file);
 
-    const uploadPayload = await uploadWhatsAppMedia(audio, mimeType);
-    const mediaId = uploadPayload?.id ?? null;
-
-    console.log("Audio uploaded", { mediaId });
-
-    if (!mediaId) {
-      throw new Error("Meta audio upload did not return a media id");
+    if (
+      messageType === "document" &&
+      !isAllowedDocumentMimeType(mimeType, file.name)
+    ) {
+      return Response.json(
+        {
+          success: false,
+          error: "Unsupported document type",
+        },
+        { status: 415 }
+      );
     }
 
-    const messagePayload = await sendWhatsAppMediaMessage({
-      to: recipient,
-      type: "audio",
-      mediaId,
+    if (messageType === "audio" && mimeType.includes("webm")) {
+      return Response.json(
+        {
+          success: false,
+          error: "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
+        },
+        { status: 415 }
+      );
+    }
+
+    console.log("Sending media", {
+      mimeType,
+      messageType,
+      filename: file.name,
+      size: file.size,
     });
 
-    const whatsappMessageId = messagePayload?.messages?.[0]?.id ?? null;
-    const fileBuffer = Buffer.from(await audio.arrayBuffer());
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const mediaUpload = await uploadWhatsAppMedia(file, mimeType);
+    const mediaId = mediaUpload?.id ?? null;
+
+    console.log("Media uploaded", { mediaId });
+
+    if (!mediaId) {
+      throw new Error("Meta media upload did not return a media id");
+    }
+
+    const metaPayload = await sendWhatsAppMediaMessage({
+      to: recipient,
+      type: messageType,
+      mediaId,
+      caption: caption || undefined,
+      filename: file.name || undefined,
+    });
+
+    const whatsappMessageId = metaPayload?.messages?.[0]?.id ?? null;
+    const baseName = path.parse(file.name || mediaId).name || mediaId;
     let savedMediaUrl: string | null = null;
     let savedMediaFilename: string | null = null;
     let savedMediaSize: number | null = null;
@@ -177,15 +230,21 @@ export async function POST(request: Request) {
       const savedMedia = await saveBufferToPublicUploads({
         buffer: fileBuffer,
         mimeType,
-        baseName: path.parse(audio.name || mediaId).name || mediaId,
+        baseName,
+        fallbackType: messageType,
       });
 
       savedMediaUrl = savedMedia.mediaUrl;
-      savedMediaFilename = audio.name || savedMedia.savedFileName;
+      savedMediaFilename = file.name || savedMedia.savedFileName;
       savedMediaSize = savedMedia.mediaSize;
     } catch (saveError) {
-      console.error("Failed to save outbound audio locally:", saveError);
+      console.error("Failed to save outbound media locally:", saveError);
     }
+
+    const content =
+      messageType === "audio"
+        ? "[audio]"
+        : caption || (messageType === "image" ? "[image]" : messageType === "video" ? "[video]" : `[${messageType}]`);
 
     const savedMessageResult = await db.query(
       `
@@ -229,21 +288,21 @@ export async function POST(request: Request) {
       [
         conversationId,
         "outbound",
-        "audio",
-        "[audio]",
+        messageType,
+        content,
         whatsappMessageId,
         "sent",
         "sent",
         "human",
         null,
         {
-          upload: uploadPayload,
-          send: messagePayload,
+          media_upload: mediaUpload,
+          message_send: metaPayload,
         },
         mediaId,
         savedMediaUrl,
         mimeType,
-        savedMediaFilename ?? audio.name ?? mediaId,
+        savedMediaFilename ?? file.name ?? baseName,
         savedMediaSize,
       ]
     );
@@ -255,21 +314,22 @@ export async function POST(request: Request) {
           last_message_preview = $1
       where id = $2
       `,
-      ["[audio]", conversationId]
+      [content, conversationId]
     );
 
     return Response.json({
       success: true,
       message: savedMessageResult.rows[0],
-      meta: messagePayload,
+      meta: metaPayload,
     });
   } catch (error) {
-    console.error("Failed to send audio message:", error);
+    const metaError = error instanceof Error ? error.message : String(error);
+    console.error("Failed to send media message:", error);
 
     return Response.json(
       {
         success: false,
-        error: "Failed to send audio message",
+        error: metaError || "Failed to send media message",
       },
       { status: 500 }
     );

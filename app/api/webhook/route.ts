@@ -1,6 +1,16 @@
+export const runtime = "nodejs";
+
 import { analyzeConversationInternal } from "../ai/analyze-conversation/route";
 import { handleLimitedAutoReply } from "@/lib/auto-reply";
 import { db } from "@/lib/db";
+import {
+  downloadWhatsAppMedia,
+  getWhatsAppMediaExtension,
+  getWhatsAppMediaInfo,
+  sanitizeWhatsAppFileName,
+} from "@/lib/whatsapp";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 const DEFAULT_CLIENT_NAME = "Esthellence";
 const DEFAULT_CAMPAIGN_NAME = "Campagne WhatsApp Ads Esthellence";
@@ -106,6 +116,83 @@ async function getOrCreateConversation({
   return created.rows[0].id as string;
 }
 
+function normalizeInboundMessageType(messageType: string | null | undefined) {
+  const normalized = (messageType ?? "").toLowerCase();
+  if (normalized === "voice") return "audio";
+  return normalized || "unknown";
+}
+
+function getInboundMediaObject(message: Record<string, unknown>) {
+  return (
+    (message.image as Record<string, unknown> | undefined) ??
+    (message.audio as Record<string, unknown> | undefined) ??
+    (message.voice as Record<string, unknown> | undefined) ??
+    (message.document as Record<string, unknown> | undefined) ??
+    (message.video as Record<string, unknown> | undefined) ??
+    (message.sticker as Record<string, unknown> | undefined) ??
+    null
+  );
+}
+
+function getInboundMediaCaption(message: Record<string, unknown>) {
+  const image = message.image as Record<string, unknown> | undefined;
+  const video = message.video as Record<string, unknown> | undefined;
+  const document = message.document as Record<string, unknown> | undefined;
+
+  return (
+    (typeof image?.caption === "string" && image.caption) ||
+    (typeof video?.caption === "string" && video.caption) ||
+    (typeof document?.caption === "string" && document.caption) ||
+    null
+  );
+}
+
+function getInboundMediaFilename(message: Record<string, unknown>) {
+  const document = message.document as Record<string, unknown> | undefined;
+  const image = message.image as Record<string, unknown> | undefined;
+  const video = message.video as Record<string, unknown> | undefined;
+  const audio = message.audio as Record<string, unknown> | undefined;
+  const voice = message.voice as Record<string, unknown> | undefined;
+  const sticker = message.sticker as Record<string, unknown> | undefined;
+
+  return (
+    (typeof document?.filename === "string" && document.filename) ||
+    (typeof image?.filename === "string" && image.filename) ||
+    (typeof video?.filename === "string" && video.filename) ||
+    (typeof audio?.filename === "string" && audio.filename) ||
+    (typeof voice?.filename === "string" && voice.filename) ||
+    (typeof sticker?.filename === "string" && sticker.filename) ||
+    null
+  );
+}
+
+async function saveMediaBufferToPublic(params: {
+  buffer: Buffer;
+  mimeType: string;
+  baseName: string;
+  fallbackType: string;
+}) {
+  const now = new Date();
+  const year = String(now.getUTCFullYear());
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const relativeDir = path.join("uploads", "whatsapp", year, month);
+  const absoluteDir = path.join(process.cwd(), "public", relativeDir);
+  const extension = getWhatsAppMediaExtension(params.mimeType, params.fallbackType);
+  const safeBaseName = sanitizeWhatsAppFileName(params.baseName);
+  const savedFileName = `${safeBaseName}.${extension}`;
+  const absolutePath = path.join(absoluteDir, savedFileName);
+  const mediaUrl = `/${path.posix.join(relativeDir.split(path.sep).join("/"), savedFileName)}`;
+
+  await mkdir(absoluteDir, { recursive: true });
+  await writeFile(absolutePath, params.buffer);
+
+  return {
+    mediaUrl,
+    savedFileName,
+    mediaSize: params.buffer.length,
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
@@ -193,7 +280,7 @@ export async function POST(request: Request) {
           } else if (incomingNormalized === "read") {
             finalStatus = "read";
           } else if (incomingNormalized === "delivered") {
-            finalStatus = currentDeliveryStatus === "sent" ? "delivered" : "delivered";
+            finalStatus = "delivered";
           } else if (incomingNormalized === "sent") {
             finalStatus = currentDeliveryStatus === "failed" ? "failed" : "sent";
           } else if (incomingNormalized === "failed") {
@@ -269,12 +356,46 @@ export async function POST(request: Request) {
     }
 
     const message = messages[0];
-
     const waId = contact?.wa_id ?? message.from;
     const profileName = contact?.profile?.name ?? null;
-    const messageType = message.type ?? "unknown";
+    const rawMessageType = normalizeInboundMessageType(message.type);
+    const mediaObject = getInboundMediaObject(message as Record<string, unknown>);
+    const mediaId = typeof mediaObject?.id === "string" ? mediaObject.id : null;
+    const mediaMimeType =
+      typeof mediaObject?.mime_type === "string"
+        ? mediaObject.mime_type
+        : typeof mediaObject?.mimeType === "string"
+          ? mediaObject.mimeType
+          : null;
+    const mediaFilename = getInboundMediaFilename(message as Record<string, unknown>);
+    const caption = getInboundMediaCaption(message as Record<string, unknown>);
+
+    const fallbackContent =
+      rawMessageType === "image"
+        ? "[image]"
+        : rawMessageType === "audio"
+          ? "[audio]"
+          : rawMessageType === "document"
+            ? mediaFilename
+              ? `[document] ${mediaFilename}`
+              : "[document]"
+            : rawMessageType === "video"
+              ? "[video]"
+              : rawMessageType === "sticker"
+                ? "[sticker]"
+                : `[${rawMessageType}]`;
+
     const messageContent =
-      messageType === "text" ? message.text?.body ?? "" : `[${messageType}]`;
+      rawMessageType === "text"
+        ? message.text?.body ?? ""
+        : caption?.trim() || fallbackContent;
+
+    console.log("Inbound media detected", {
+      type: rawMessageType,
+      mediaId,
+      mimeType: mediaMimeType,
+      filename: mediaFilename,
+    });
 
     const clientId = await getOrCreateClient();
     const campaignId = await getOrCreateCampaign(clientId);
@@ -291,20 +412,77 @@ export async function POST(request: Request) {
       campaignId,
     });
 
+    let savedMediaUrl: string | null = null;
+    let savedMediaFilename: string | null = null;
+    let savedMediaSize: number | null = null;
+    let resolvedMimeType: string | null = mediaMimeType;
+
+    if (mediaId) {
+      try {
+        const mediaInfo = await getWhatsAppMediaInfo(mediaId);
+        resolvedMimeType = mediaInfo.mime_type ?? resolvedMimeType;
+
+        if (mediaInfo.url) {
+          const downloadResult = await downloadWhatsAppMedia(mediaInfo.url);
+          const savedMedia = await saveMediaBufferToPublic({
+            buffer: downloadResult.buffer,
+            mimeType: mediaInfo.mime_type ?? downloadResult.mimeType,
+            baseName: message.id ?? mediaId,
+            fallbackType: rawMessageType,
+          });
+
+          savedMediaUrl = savedMedia.mediaUrl;
+          savedMediaFilename = mediaFilename ?? savedMedia.savedFileName;
+          savedMediaSize = savedMedia.mediaSize;
+
+          console.log("Inbound media local save", {
+            mediaUrl: savedMediaUrl,
+            mediaSize: savedMediaSize,
+          });
+        } else {
+          console.error("Inbound media info has no download URL:", {
+            mediaId,
+          });
+        }
+      } catch (error) {
+        console.error("Inbound media download/save failed:", {
+          mediaId,
+          error,
+        });
+      }
+    }
+
     const savedMessageResult = await db.query(
       `
       insert into messages
-      (conversation_id, direction, message_type, content, whatsapp_message_id, raw_payload)
-      values ($1, $2, $3, $4, $5, $6)
+      (
+        conversation_id,
+        direction,
+        message_type,
+        content,
+        whatsapp_message_id,
+        raw_payload,
+        media_id,
+        media_url,
+        media_mime_type,
+        media_filename,
+        media_size
+      )
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       returning id
       `,
       [
         conversationId,
         "inbound",
-        messageType,
+        rawMessageType,
         messageContent,
         message.id ?? null,
         payload,
+        mediaId,
+        savedMediaUrl,
+        resolvedMimeType,
+        savedMediaFilename ?? mediaFilename,
+        savedMediaSize,
       ]
     );
     const savedMessageId = savedMessageResult.rows[0]?.id as string | undefined;
@@ -338,7 +516,7 @@ export async function POST(request: Request) {
       console.log("Limited auto-reply scheduled:", {
         conversationId,
         inboundMessageId: savedMessageId,
-        messageType,
+        messageType: rawMessageType,
       });
     }
 

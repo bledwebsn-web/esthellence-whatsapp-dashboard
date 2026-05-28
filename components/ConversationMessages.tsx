@@ -16,6 +16,11 @@ type ConversationMessage = {
   content: string | null;
   whatsapp_message_id: string | null;
   status: string | null;
+  media_id?: string | null;
+  media_url?: string | null;
+  media_mime_type?: string | null;
+  media_filename?: string | null;
+  media_size?: number | null;
   created_at: string;
 };
 
@@ -88,15 +93,191 @@ function messagesFingerprint(messages: ConversationMessage[]) {
           message.read_at ?? "",
           message.delivered_at ?? "",
           message.content ?? "",
+          message.media_id ?? "",
+          message.media_url ?? "",
+          message.media_mime_type ?? "",
+          message.media_filename ?? "",
+          message.media_size ?? "",
         ].join("|")
     )
     .join("::");
 }
 
+function isFallbackMediaLabel(content: string | null | undefined, messageType: string) {
+  const normalized = (content ?? "").trim().toLowerCase();
+  const fallbackLabels = [
+    `[${messageType}]`,
+    "[image]",
+    "[audio]",
+    "[document]",
+    "[video]",
+    "[sticker]",
+  ];
+
+  return fallbackLabels.includes(normalized);
+}
+
+function MediaContent({ message }: { message: ConversationMessage }) {
+  const mediaUrl = message.media_url ?? "";
+  const messageType = (message.message_type ?? "").toLowerCase();
+  const content = message.content ?? "";
+  const hasCaption = Boolean(content.trim()) && !isFallbackMediaLabel(content, messageType);
+
+  if (messageType === "image" || messageType === "sticker") {
+    if (mediaUrl) {
+      return (
+        <div className="space-y-2">
+          <a href={mediaUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
+            <img
+              src={mediaUrl}
+              alt={message.media_filename ?? "Image WhatsApp"}
+              className={`w-full object-cover ${
+                messageType === "sticker" ? "max-h-[180px]" : "max-h-[360px]"
+              }`}
+              loading="lazy"
+            />
+          </a>
+          {hasCaption ? (
+            <div className="whitespace-pre-wrap text-sm leading-6">{content}</div>
+          ) : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+          {messageType === "sticker"
+            ? "Sticker reçu — média indisponible"
+            : "Image reçue — média indisponible"}
+        </div>
+        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+      </div>
+    );
+  }
+
+  if (messageType === "audio") {
+    if (mediaUrl) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-black/5 text-current/80">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-4.5 w-4.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
+                <path d="M19 11a7 7 0 0 1-14 0" />
+                <path d="M12 18v3" />
+              </svg>
+            </span>
+            <div>
+              <div className="font-medium">Message vocal</div>
+              <div className="text-[12px] opacity-80">Audio WhatsApp</div>
+            </div>
+          </div>
+          <audio controls preload="none" src={mediaUrl} className="w-full" />
+          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+          Message vocal — média indisponible
+        </div>
+        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+      </div>
+    );
+  }
+
+  if (messageType === "document") {
+    if (mediaUrl) {
+      return (
+        <div className="space-y-2">
+          <div className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white/70 text-[var(--app-fg)]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="h-5 w-5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" />
+                  <path d="M14 2v5h5" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{message.media_filename ?? "Document"}</div>
+                <div className="text-[12px] text-[var(--app-muted)]">
+                  {message.media_mime_type ?? "application/octet-stream"}
+                </div>
+                <a
+                  href={mediaUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center rounded-full border border-[color:var(--app-border)] px-3 py-1 text-xs font-medium"
+                >
+                  Télécharger
+                </a>
+              </div>
+            </div>
+          </div>
+          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+          Document reçu — média indisponible
+        </div>
+        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+      </div>
+    );
+  }
+
+  if (messageType === "video") {
+    if (mediaUrl) {
+      return (
+        <div className="space-y-2">
+          <video
+            controls
+            src={mediaUrl}
+            className="max-h-[360px] w-full rounded-2xl object-cover"
+          />
+          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+          Vidéo reçue — média indisponible
+        </div>
+        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+      </div>
+    );
+  }
+
+  return <div className="whitespace-pre-wrap text-sm leading-6 sm:text-[15px]">{content || "Message sans contenu"}</div>;
+}
+
 function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
-  const isAudioMessage = message.message_type === "audio";
   const whatsappStatus = getEffectiveDeliveryStatus(message);
 
   return (
@@ -110,33 +291,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
               : "border-[color:var(--app-accent-border)] bg-[var(--app-outbound-bg)] text-[var(--app-outbound-text)]"
         }`}
       >
-        <div className="whitespace-pre-wrap text-sm leading-6 sm:text-[15px]">
-          {isAudioMessage ? (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full bg-black/5 text-current/80">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="h-4.5 w-4.5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z" />
-                  <path d="M19 11a7 7 0 0 1-14 0" />
-                  <path d="M12 18v3" />
-                </svg>
-              </span>
-              <div>
-                <div className="font-medium">Message vocal</div>
-                <div className="text-[12px] opacity-80">Audio WhatsApp</div>
-              </div>
-            </div>
-          ) : (
-            message.content || "Message sans contenu"
-          )}
-        </div>
+        <MediaContent message={message} />
 
         <div
           className={`mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] ${
@@ -154,7 +309,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   <img
                     src={WABASSIST_BADGE_SRC}
                     alt="WABAssist"
-                    className="h-3.5 w-3.5 rounded-full"
+                    className="h-3.5 w-3.5 rounded-full object-cover"
                   />
                   <span>WABAssist</span>
                 </span>
@@ -349,9 +504,7 @@ export default function ConversationMessages({
               {liveLabel}
             </span>
             {latestServerTime ? (
-              <span>
-                Serveur {new Date(latestServerTime).toLocaleTimeString("fr-FR")}
-              </span>
+              <span>Serveur {new Date(latestServerTime).toLocaleTimeString("fr-FR")}</span>
             ) : null}
           </div>
 
