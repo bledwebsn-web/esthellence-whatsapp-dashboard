@@ -499,7 +499,7 @@ export default function ConversationMessages({
         ref={containerRef}
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
-        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-48 sm:pb-40">
+        <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-52 sm:pb-44">
           <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
@@ -520,7 +520,7 @@ export default function ConversationMessages({
                 <MessageBubble key={message.id} message={message} />
               ))
             )}
-            <div id="messages-bottom" ref={bottomRef} className="h-28 sm:h-32" />
+            <div id="messages-bottom" ref={bottomRef} className="h-36 sm:h-32" />
           </div>
         </div>
       </div>
@@ -533,7 +533,7 @@ export default function ConversationMessages({
             scrollToBottom("smooth");
             setHasNewMessages(false);
           }}
-          className="absolute bottom-32 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-28 sm:h-12 sm:w-12"
+          className="absolute bottom-36 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-28 sm:h-12 sm:w-12"
         >
           <span className="relative flex h-full w-full items-center justify-center">
             <svg
@@ -556,7 +556,7 @@ export default function ConversationMessages({
       ) : null}
 
       {status === "error" ? (
-        <div className="absolute bottom-4 left-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
+        <div className="absolute bottom-24 left-4 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100 sm:bottom-20">
           Dernière mise à jour échouée
         </div>
       ) : null}

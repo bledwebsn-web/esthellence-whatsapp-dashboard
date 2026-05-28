@@ -7,17 +7,80 @@ import {
   sendWhatsAppMediaMessage,
   uploadWhatsAppMedia,
 } from "@/lib/whatsapp";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const MAX_MEDIA_SIZE_BYTES = 16 * 1024 * 1024;
 
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/3gpp"]);
+const AUDIO_MIME_TYPES = new Set([
+  "audio/aac",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/amr",
+  "audio/ogg",
+  "audio/opus",
+]);
+const DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  mp4: "video/mp4",
+  "3gp": "video/3gpp",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  amr: "audio/amr",
+  ogg: "audio/ogg",
+  opus: "audio/opus",
+  pdf: "application/pdf",
+  txt: "text/plain",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
+
 function getMetaRecipient(conversation: { wa_id: string | null; phone: string | null }) {
   return conversation.wa_id || conversation.phone;
 }
 
+function normalizeMimeType(value: string) {
+  return value.split(";")[0]?.trim().toLowerCase() || value.trim().toLowerCase();
+}
+
+function getFileExtension(fileName: string) {
+  const lastDot = fileName.lastIndexOf(".");
+  if (lastDot < 0) return "";
+  return fileName.slice(lastDot + 1).trim().toLowerCase();
+}
+
+function inferMimeType(file: File) {
+  const providedMimeType = normalizeMimeType(file.type || "");
+  if (providedMimeType) return providedMimeType;
+
+  const extension = getFileExtension(file.name);
+  return MIME_BY_EXTENSION[extension] ?? "";
+}
+
 function resolveOutgoingMediaType(file: File) {
-  const mimeType = (file.type || "").toLowerCase();
+  const mimeType = inferMimeType(file);
 
   if (mimeType.startsWith("image/")) {
     return "image" as const;
@@ -38,17 +101,6 @@ function isAllowedDocumentMimeType(mimeType: string, fileName: string) {
   const normalized = mimeType.toLowerCase();
   const lowerFileName = fileName.toLowerCase();
 
-  const allowedMimeTypes = [
-    "application/pdf",
-    "text/plain",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ];
-
   const allowedExtensions = [
     ".pdf",
     ".txt",
@@ -61,7 +113,7 @@ function isAllowedDocumentMimeType(mimeType: string, fileName: string) {
   ];
 
   return (
-    allowedMimeTypes.includes(normalized) ||
+    DOCUMENT_MIME_TYPES.has(normalized) ||
     allowedExtensions.some((extension) => lowerFileName.endsWith(extension))
   );
 }
@@ -69,19 +121,22 @@ function isAllowedDocumentMimeType(mimeType: string, fileName: string) {
 async function saveBufferToPublicUploads(params: {
   buffer: Buffer;
   mimeType: string;
-  baseName: string;
-  fallbackType: string;
+  originalFileName: string;
 }) {
   const now = new Date();
   const year = String(now.getUTCFullYear());
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const relativeDir = path.join("uploads", "whatsapp", year, month);
   const absoluteDir = path.join(process.cwd(), "public", relativeDir);
-  const extension = getWhatsAppMediaExtension(params.mimeType, params.fallbackType);
-  const safeBaseName = sanitizeWhatsAppFileName(params.baseName);
-  const savedFileName = `${safeBaseName}.${extension}`;
+  const extension = getWhatsAppMediaExtension(params.mimeType, "document");
+  const safeBaseName =
+    sanitizeWhatsAppFileName(path.parse(params.originalFileName).name || "media");
+  const savedFileName = `${safeBaseName}-${randomUUID()}.${extension}`;
   const absolutePath = path.join(absoluteDir, savedFileName);
-  const mediaUrl = `/${path.posix.join(relativeDir.split(path.sep).join("/"), savedFileName)}`;
+  const mediaUrl = `/${path.posix.join(
+    relativeDir.split(path.sep).join("/"),
+    savedFileName
+  )}`;
 
   await mkdir(absoluteDir, { recursive: true });
   await writeFile(absolutePath, params.buffer);
@@ -93,8 +148,37 @@ async function saveBufferToPublicUploads(params: {
   };
 }
 
-function readJsonResponse(response: Response) {
-  return response.json().catch(() => null);
+async function readJsonResponse(response: Response) {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return { data: null as Record<string, unknown> | null, raw, parsed: false };
+  }
+
+  try {
+    return {
+      data: JSON.parse(raw) as Record<string, unknown>,
+      raw,
+      parsed: true,
+    };
+  } catch {
+    return { data: null as Record<string, unknown> | null, raw, parsed: false };
+  }
+}
+
+function getResponseErrorMessage(
+  result: { data: Record<string, unknown> | null; parsed: boolean },
+  fallback: string
+) {
+  const errorValue = result.data?.error;
+  if (typeof errorValue === "string" && errorValue.trim()) {
+    return errorValue;
+  }
+
+  if (!result.parsed) {
+    return "Réponse serveur invalide. Rechargez la page ou vérifiez la route API.";
+  }
+
+  return fallback;
 }
 
 export async function POST(request: Request) {
@@ -153,7 +237,6 @@ export async function POST(request: Request) {
     }
 
     const recipient = getMetaRecipient(conversation);
-
     if (!recipient) {
       return Response.json(
         {
@@ -169,8 +252,35 @@ export async function POST(request: Request) {
       throw new Error("WHATSAPP_ACCESS_TOKEN is missing");
     }
 
-    const mimeType = file.type || "application/octet-stream";
+    const mimeType = inferMimeType(file);
+    if (!mimeType) {
+      return Response.json(
+        {
+          success: false,
+          error: "Format non accepté par WhatsApp.",
+        },
+        { status: 415 }
+      );
+    }
+
     const messageType = resolveOutgoingMediaType(file);
+
+    const accepted =
+      IMAGE_MIME_TYPES.has(mimeType) ||
+      VIDEO_MIME_TYPES.has(mimeType) ||
+      AUDIO_MIME_TYPES.has(mimeType) ||
+      DOCUMENT_MIME_TYPES.has(mimeType);
+
+    if (!accepted) {
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Format non accepté par WhatsApp. Formats acceptés : JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, MP4, MP3, M4A, AAC, AMR, OGG.",
+        },
+        { status: 415 }
+      );
+    }
 
     if (
       messageType === "document" &&
@@ -179,17 +289,8 @@ export async function POST(request: Request) {
       return Response.json(
         {
           success: false,
-          error: "Unsupported document type",
-        },
-        { status: 415 }
-      );
-    }
-
-    if (messageType === "audio" && mimeType.includes("webm")) {
-      return Response.json(
-        {
-          success: false,
-          error: "Format audio non accepté par WhatsApp. Utilisez audio/ogg, audio/mp4, audio/mpeg, audio/aac ou audio/amr.",
+          error:
+            "Format non accepté par WhatsApp. Formats acceptés : JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, MP4, MP3, M4A, AAC, AMR, OGG.",
         },
         { status: 415 }
       );
@@ -203,7 +304,10 @@ export async function POST(request: Request) {
     });
 
     const fileBuffer = Buffer.from(await file.arrayBuffer());
-    const mediaUpload = await uploadWhatsAppMedia(file, mimeType);
+    const mediaUpload = await uploadWhatsAppMedia(
+      new Blob([fileBuffer], { type: mimeType }),
+      mimeType
+    );
     const mediaId = mediaUpload?.id ?? null;
 
     console.log("Media uploaded", { mediaId });
@@ -230,12 +334,11 @@ export async function POST(request: Request) {
       const savedMedia = await saveBufferToPublicUploads({
         buffer: fileBuffer,
         mimeType,
-        baseName,
-        fallbackType: messageType,
+        originalFileName: file.name || `${baseName}.${getWhatsAppMediaExtension(mimeType, messageType)}`,
       });
 
       savedMediaUrl = savedMedia.mediaUrl;
-      savedMediaFilename = file.name || savedMedia.savedFileName;
+      savedMediaFilename = file.name || `${baseName}.${getWhatsAppMediaExtension(mimeType, messageType)}`;
       savedMediaSize = savedMedia.mediaSize;
     } catch (saveError) {
       console.error("Failed to save outbound media locally:", saveError);
@@ -244,7 +347,12 @@ export async function POST(request: Request) {
     const content =
       messageType === "audio"
         ? "[audio]"
-        : caption || (messageType === "image" ? "[image]" : messageType === "video" ? "[video]" : `[${messageType}]`);
+        : caption ||
+          (messageType === "image"
+            ? "[image]"
+            : messageType === "video"
+              ? "[video]"
+              : `[${messageType}]`);
 
     const savedMessageResult = await db.query(
       `

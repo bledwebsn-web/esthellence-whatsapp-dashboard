@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 
 type ManualReplyFormProps = {
@@ -8,27 +15,191 @@ type ManualReplyFormProps = {
   autoReplyEnabled?: boolean;
 };
 
+type ConversationSummaryCardProps = {
+  conversationId: string;
+  initialSummary: string | null;
+  className?: string;
+  embedded?: boolean;
+  showHeader?: boolean;
+};
+
+type JsonResponseResult = {
+  data: Record<string, unknown> | null;
+  raw: string;
+  parsed: boolean;
+};
+
 export const WABASSIST_BADGE_SRC = "/wabassist-circle.webp";
 
 const MAX_MEDIA_SIZE_BYTES = 16 * 1024 * 1024;
-const ACCEPTED_FILE_TYPES = [
-  "image/*",
-  "video/*",
-  "audio/*",
+const MAX_TEXTAREA_HEIGHT = 96;
+const ACCEPTED_FILE_INPUT = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/3gpp",
+  "audio/aac",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/amr",
+  "audio/ogg",
+  "audio/opus",
   "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ".doc",
   ".docx",
   ".xls",
   ".xlsx",
   ".ppt",
   ".pptx",
+  ".pdf",
   ".txt",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".mp4",
+  ".3gp",
+  ".mp3",
+  ".m4a",
+  ".aac",
+  ".amr",
+  ".ogg",
+  ".opus",
 ].join(",");
 
-const PREFERRED_AUDIO_MIME_TYPES = [
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/3gpp"]);
+
+const AUDIO_MIME_TYPES = new Set([
+  "audio/aac",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/amr",
+  "audio/ogg",
+  "audio/opus",
+  "audio/webm",
+]);
+
+const DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  mp4: "video/mp4",
+  "3gp": "video/3gpp",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  amr: "audio/amr",
+  ogg: "audio/ogg",
+  opus: "audio/opus",
+  pdf: "application/pdf",
+  txt: "text/plain",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
+
+const AUDIO_PREFERRED_RECORDING_TYPES = [
   "audio/ogg;codecs=opus",
   "audio/ogg",
+  "audio/webm;codecs=opus",
+  "audio/webm",
 ];
+
+function normalizeMimeType(value: string) {
+  return value.split(";")[0]?.trim().toLowerCase() || value.trim().toLowerCase();
+}
+
+function getFileExtension(fileName: string) {
+  const lastDot = fileName.lastIndexOf(".");
+  if (lastDot < 0) return "";
+  return fileName.slice(lastDot + 1).trim().toLowerCase();
+}
+
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 o";
+  }
+
+  if (bytes < 1024) {
+    return `${bytes} o`;
+  }
+
+  const units = ["Ko", "Mo", "Go"];
+  let value = bytes / 1024;
+  let unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function inferMimeTypeFromFile(file: File) {
+  const providedMimeType = normalizeMimeType(file.type || "");
+  if (providedMimeType) {
+    return providedMimeType;
+  }
+
+  const extension = getFileExtension(file.name);
+  return MIME_BY_EXTENSION[extension] ?? "";
+}
+
+function isAcceptedFrontendFile(file: File) {
+  const mimeType = inferMimeTypeFromFile(file);
+  const extension = getFileExtension(file.name);
+
+  if (IMAGE_MIME_TYPES.has(mimeType)) return true;
+  if (VIDEO_MIME_TYPES.has(mimeType)) return true;
+  if (AUDIO_MIME_TYPES.has(mimeType)) return true;
+  if (DOCUMENT_MIME_TYPES.has(mimeType)) return true;
+
+  return Boolean(MIME_BY_EXTENSION[extension]);
+}
+
+function getFileKind(file: File) {
+  const mimeType = inferMimeTypeFromFile(file);
+
+  if (IMAGE_MIME_TYPES.has(mimeType)) return "image";
+  if (VIDEO_MIME_TYPES.has(mimeType)) return "video";
+  if (AUDIO_MIME_TYPES.has(mimeType)) return "audio";
+  return "document";
+}
+
+function getExtensionBadge(file: File) {
+  const extension = getFileExtension(file.name);
+  return extension ? extension.toUpperCase() : "FICHIER";
+}
 
 function supportsMimeType(mimeType: string) {
   return (
@@ -38,8 +209,44 @@ function supportsMimeType(mimeType: string) {
   );
 }
 
-function pickAudioMimeType() {
-  return PREFERRED_AUDIO_MIME_TYPES.find((mimeType) => supportsMimeType(mimeType)) ?? null;
+function pickRecorderMimeType() {
+  return (
+    AUDIO_PREFERRED_RECORDING_TYPES.find((mimeType) => supportsMimeType(mimeType)) ??
+    null
+  );
+}
+
+async function readJsonResponse(response: Response): Promise<JsonResponseResult> {
+  const raw = await response.text();
+  if (!raw.trim()) {
+    return { data: null, raw, parsed: false };
+  }
+
+  try {
+    return {
+      data: JSON.parse(raw) as Record<string, unknown>,
+      raw,
+      parsed: true,
+    };
+  } catch {
+    return { data: null, raw, parsed: false };
+  }
+}
+
+function getResponseErrorMessage(
+  result: JsonResponseResult,
+  fallback: string
+) {
+  const errorValue = result.data?.error;
+  if (typeof errorValue === "string" && errorValue.trim()) {
+    return errorValue;
+  }
+
+  if (!result.parsed) {
+    return "Réponse serveur invalide. Rechargez la page ou vérifiez la route API.";
+  }
+
+  return fallback;
 }
 
 function normalizeSummaryText(value: unknown) {
@@ -55,14 +262,6 @@ function normalizeSummaryText(value: unknown) {
 
   return trimmed;
 }
-
-type ConversationSummaryCardProps = {
-  conversationId: string;
-  initialSummary: string | null;
-  className?: string;
-  embedded?: boolean;
-  showHeader?: boolean;
-};
 
 export function ConversationSummaryCard({
   conversationId,
@@ -93,16 +292,18 @@ export function ConversationSummaryCard({
         body: JSON.stringify({ conversation_id: conversationId }),
       });
 
-      const data: { success?: boolean; summary?: unknown; error?: string } =
-        await response.json();
+      const parsed = await readJsonResponse(response);
 
-      if (!response.ok || !data.success) {
+      if (!response.ok || !parsed.data?.success) {
         throw new Error(
-          data.error || "Résumé indisponible. Réessayez ou relisez la conversation."
+          getResponseErrorMessage(
+            parsed,
+            "Résumé indisponible. Réessayez ou relisez la conversation."
+          )
         );
       }
 
-      const nextSummary = normalizeSummaryText(data.summary);
+      const nextSummary = normalizeSummaryText(parsed.data.summary);
       setSummary(nextSummary);
       router.refresh();
     } catch (error) {
@@ -141,7 +342,7 @@ export function ConversationSummaryCard({
 
       <div className="text-sm leading-6 text-slate-800 dark:text-slate-100">
         {isLongSummary ? (
-          <details open className="group">
+          <details className="group">
             <summary className="cursor-pointer list-none text-[11px] uppercase tracking-[0.18em] text-[var(--app-muted)] transition hover:text-[var(--app-fg)]">
               Voir le résumé complet
             </summary>
@@ -166,7 +367,9 @@ export function ConversationSummaryCard({
 
   return (
     <section
-      className={`rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 ${className ?? ""}`}
+      className={`rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 ${
+        className ?? ""
+      }`}
     >
       {content}
     </section>
@@ -183,6 +386,7 @@ export default function ManualReplyForm({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaChunksRef = useRef<BlobPart[]>([]);
+  const previewObjectUrlRef = useRef<string | null>(null);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -190,9 +394,25 @@ export default function ManualReplyForm({
   const [aiEnabled, setAiEnabled] = useState(Boolean(initialAutoReplyEnabled));
   const [toggleLoading, setToggleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFilePreviewUrl, setSelectedFilePreviewUrl] = useState<string | null>(null);
 
-  const hasText = useMemo(() => message.trim().length > 0, [message]);
+  const hasText = message.trim().length > 0;
+  const hasAttachment = Boolean(selectedFile);
+  const canSend = hasText || hasAttachment;
+  const selectedFileKind = useMemo(
+    () => (selectedFile ? getFileKind(selectedFile) : null),
+    [selectedFile]
+  );
+  const selectedFileSizeLabel = useMemo(
+    () => (selectedFile ? formatFileSize(selectedFile.size) : ""),
+    [selectedFile]
+  );
+  const selectedFileBadge = useMemo(
+    () => (selectedFile ? getExtensionBadge(selectedFile) : ""),
+    [selectedFile]
+  );
+  const placeholder = hasAttachment ? "Ajouter un commentaire..." : "Écrire un message...";
 
   useEffect(() => {
     setAiEnabled(Boolean(initialAutoReplyEnabled));
@@ -203,18 +423,40 @@ export default function ManualReplyForm({
     if (!textarea) return;
 
     textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 88)}px`;
-  }, [message]);
+    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }, [message, selectedFile]);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setSelectedFilePreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setSelectedFilePreviewUrl(objectUrl);
+    previewObjectUrlRef.current = objectUrl;
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+      if (previewObjectUrlRef.current === objectUrl) {
+        previewObjectUrlRef.current = null;
+      }
+    };
+  }, [selectedFile]);
 
   useEffect(() => {
     return () => {
       mediaRecorderRef.current?.stop();
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
     };
   }, []);
 
   async function handleAiSuggestion() {
-    if (loading) return;
+    if (loading || recording || toggleLoading) return;
 
     setError(null);
 
@@ -225,21 +467,23 @@ export default function ManualReplyForm({
         body: JSON.stringify({ conversation_id: conversationId }),
       });
 
-      const data = await response.json();
+      const parsed = await readJsonResponse(response);
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate AI suggestion");
+      if (!response.ok || !parsed.data?.success) {
+        throw new Error(
+          getResponseErrorMessage(parsed, "Impossible de générer une réponse IA.")
+        );
       }
 
-      if (typeof data.reply === "string") {
-        setMessage(data.reply);
+      if (typeof parsed.data.reply === "string") {
+        setMessage(parsed.data.reply);
         requestAnimationFrame(() => textareaRef.current?.focus());
       }
     } catch (suggestionError) {
       setError(
         suggestionError instanceof Error
           ? suggestionError.message
-          : "Failed to generate AI suggestion"
+          : "Impossible de générer une réponse IA."
       );
     }
   }
@@ -263,19 +507,17 @@ export default function ManualReplyForm({
         }
       );
 
-      const data: {
-        success?: boolean;
-        auto_reply_enabled?: boolean;
-        error?: string;
-      } = await response.json();
+      const parsed = await readJsonResponse(response);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to update auto-reply");
+      if (!response.ok || !parsed.data?.success) {
+        throw new Error(
+          getResponseErrorMessage(parsed, "Impossible de mettre à jour l’auto-réponse.")
+        );
       }
 
       const normalized =
-        typeof data.auto_reply_enabled === "boolean"
-          ? data.auto_reply_enabled
+        typeof parsed.data.auto_reply_enabled === "boolean"
+          ? parsed.data.auto_reply_enabled
           : nextValue;
 
       setAiEnabled(normalized);
@@ -285,16 +527,16 @@ export default function ManualReplyForm({
       setError(
         toggleError instanceof Error
           ? toggleError.message
-          : "Failed to update auto-reply"
+          : "Impossible de mettre à jour l’auto-réponse."
       );
     } finally {
       setToggleLoading(false);
     }
   }
 
-  async function handleSubmit() {
+  async function handleTextSubmit() {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || loading) return;
+    if (!trimmedMessage || loading || recording || toggleLoading) return;
 
     setLoading(true);
     setError(null);
@@ -309,21 +551,22 @@ export default function ManualReplyForm({
         }),
       });
 
-      const data = await response.json();
+      const parsed = await readJsonResponse(response);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to send WhatsApp message");
+      if (!response.ok || !parsed.data?.success) {
+        throw new Error(
+          getResponseErrorMessage(parsed, "Impossible d’envoyer le message WhatsApp.")
+        );
       }
 
       setMessage("");
-      setSelectedFileName(null);
       router.refresh();
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Failed to send WhatsApp message"
+          : "Impossible d’envoyer le message WhatsApp."
       );
     } finally {
       setLoading(false);
@@ -333,6 +576,13 @@ export default function ManualReplyForm({
   async function sendMediaFile(file: File) {
     if (loading || recording || toggleLoading) return;
 
+    if (!isAcceptedFrontendFile(file)) {
+      setError(
+        "Format non accepté par WhatsApp. Formats acceptés : JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, MP4, MP3, M4A, AAC, AMR, OGG."
+      );
+      return;
+    }
+
     if (file.size > MAX_MEDIA_SIZE_BYTES) {
       setError("Fichier trop volumineux. Limite MVP : 16 Mo.");
       return;
@@ -340,15 +590,16 @@ export default function ManualReplyForm({
 
     setLoading(true);
     setError(null);
-    setSelectedFileName(file.name);
 
-    const caption = message.trim();
+    const caption = hasText ? message.trim() : "";
+    const fileKind = getFileKind(file);
 
     try {
       const formData = new FormData();
       formData.append("conversation_id", conversationId);
       formData.append("file", file);
-      if (caption) {
+
+      if (caption && fileKind !== "audio") {
         formData.append("caption", caption);
       }
 
@@ -357,14 +608,16 @@ export default function ManualReplyForm({
         body: formData,
       });
 
-      const data = await response.json();
+      const parsed = await readJsonResponse(response);
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to send media message");
+      if (!response.ok || !parsed.data?.success) {
+        throw new Error(
+          getResponseErrorMessage(parsed, "Impossible d’envoyer le média.")
+        );
       }
 
       setMessage("");
-      setSelectedFileName(null);
+      setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -373,29 +626,48 @@ export default function ManualReplyForm({
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (mediaError) {
       setError(
-        mediaError instanceof Error
-          ? mediaError.message
-          : "Failed to send media message"
+        mediaError instanceof Error ? mediaError.message : "Impossible d’envoyer le média."
       );
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelect(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    await sendMediaFile(file);
+    if (!isAcceptedFrontendFile(file)) {
+      setError(
+        "Format non accepté par WhatsApp. Formats acceptés : JPG, PNG, WEBP, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, MP4, MP3, M4A, AAC, AMR, OGG."
+      );
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+      setError("Fichier trop volumineux. Limite MVP : 16 Mo.");
+      event.target.value = "";
+      return;
+    }
+
+    setError(null);
+    setSelectedFile(file);
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
   async function startRecording() {
-    const selectedMimeType = pickAudioMimeType();
+    const selectedMimeType = pickRecorderMimeType();
 
-    if (!selectedMimeType) {
-      setError(
-        "Votre navigateur enregistre en WebM, format non accepté par WhatsApp. Essayez depuis Chrome Android ou envoyez un fichier audio compatible."
-      );
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("La capture audio n’est pas disponible sur ce navigateur.");
       return;
     }
 
@@ -405,7 +677,9 @@ export default function ManualReplyForm({
       mediaStreamRef.current = stream;
       mediaChunksRef.current = [];
 
-      const recorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
+      const recorder = selectedMimeType
+        ? new MediaRecorder(stream, { mimeType: selectedMimeType })
+        : new MediaRecorder(stream);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -426,12 +700,34 @@ export default function ManualReplyForm({
           return;
         }
 
-        const blob = new Blob(chunks, { type: selectedMimeType });
-        const file = new File([blob], "voice-message.ogg", {
-          type: "audio/ogg",
+        const blob = new Blob(chunks, {
+          type: recorder.mimeType || selectedMimeType || "audio/webm",
+        });
+        const recordedMimeType = (
+          blob.type || recorder.mimeType || selectedMimeType || "audio/webm"
+        )
+          .toLowerCase()
+          .trim();
+        const extension = recordedMimeType.includes("ogg")
+          ? "ogg"
+          : recordedMimeType.includes("mp4")
+            ? "m4a"
+            : recordedMimeType.includes("mpeg")
+              ? "mp3"
+              : recordedMimeType.includes("aac")
+                ? "aac"
+                : recordedMimeType.includes("amr")
+                  ? "amr"
+                  : recordedMimeType.includes("opus")
+                    ? "opus"
+                    : "webm";
+        const file = new File([blob], `voice-message.${extension}`, {
+          type: recordedMimeType || "audio/webm",
         });
 
         setLoading(true);
+        setError(null);
+
         try {
           const formData = new FormData();
           formData.append("conversation_id", conversationId);
@@ -442,10 +738,15 @@ export default function ManualReplyForm({
             body: formData,
           });
 
-          const data = await response.json();
+          const parsed = await readJsonResponse(response);
 
-          if (!response.ok || !data.success) {
-            throw new Error(data.error || "Failed to send audio message");
+          if (!response.ok || !parsed.data?.success) {
+            throw new Error(
+              getResponseErrorMessage(
+                parsed,
+                "Impossible d’envoyer le message vocal."
+              )
+            );
           }
 
           router.refresh();
@@ -453,7 +754,7 @@ export default function ManualReplyForm({
           setError(
             audioError instanceof Error
               ? audioError.message
-              : "Failed to send audio message"
+              : "Impossible d’envoyer le message vocal."
           );
         } finally {
           setLoading(false);
@@ -468,7 +769,7 @@ export default function ManualReplyForm({
       setError(
         recordingError instanceof Error
           ? recordingError.message
-          : "Microphone access denied"
+          : "Impossible d’accéder au micro."
       );
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
@@ -481,11 +782,11 @@ export default function ManualReplyForm({
     mediaRecorderRef.current?.stop();
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      if (hasText) {
-        void handleSubmit();
+      if (hasText && !selectedFile) {
+        void handleTextSubmit();
       }
       return;
     }
@@ -496,28 +797,97 @@ export default function ManualReplyForm({
     }
   }
 
+  const selectedFileDisplay = selectedFile ? (
+    <div className="mb-2 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 shadow-sm">
+      <div className="flex items-start gap-3">
+        {selectedFileKind === "image" && selectedFilePreviewUrl ? (
+          <a
+            href={selectedFilePreviewUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block shrink-0 overflow-hidden rounded-xl"
+          >
+            <img
+              src={selectedFilePreviewUrl}
+              alt={selectedFile.name}
+              className="h-14 w-14 rounded-xl object-cover"
+            />
+          </a>
+        ) : selectedFileKind === "video" && selectedFilePreviewUrl ? (
+          <video
+            src={selectedFilePreviewUrl}
+            controls
+            className="h-16 w-24 shrink-0 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[11px] font-semibold text-[var(--app-fg)]">
+            {selectedFileBadge}
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-[var(--app-fg)]">
+                {selectedFile.name}
+              </div>
+              <div className="text-[11px] text-[var(--app-muted)]">
+                {selectedFileSizeLabel}
+                {selectedFile.type ? ` · ${selectedFile.type}` : ""}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Retirer le fichier"
+              onClick={clearSelectedFile}
+              disabled={loading || recording || toggleLoading}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-4 w-4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {selectedFileKind === "audio" && selectedFilePreviewUrl ? (
+            <audio controls src={selectedFilePreviewUrl} className="mt-2 w-full" />
+          ) : null}
+
+          {selectedFileKind === "document" ? (
+            <div className="mt-2 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-[var(--app-muted)]">
+              {selectedFileBadge}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div
       className={`mx-auto w-full px-3 transition-all duration-300 sm:px-0 ${
-        hasText ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
+        hasText || hasAttachment ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
       }`}
     >
       <div className="rounded-[28px] border border-white/10 bg-white/[0.07] px-2.5 py-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:bg-white/[0.07]">
-        {selectedFileName ? (
-          <div className="mb-2 flex items-center gap-2 px-1">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-[var(--app-muted)]">
-              <span className="h-2 w-2 rounded-full bg-cyan-400" />
-              <span className="max-w-[220px] truncate">{selectedFileName}</span>
-            </span>
-          </div>
-        ) : null}
+        {selectedFileDisplay}
 
         <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept={ACCEPTED_FILE_TYPES}
+            accept={ACCEPTED_FILE_INPUT}
             onChange={handleFileSelect}
           />
 
@@ -549,18 +919,18 @@ export default function ManualReplyForm({
               onChange={(event) => setMessage(event.target.value)}
               onKeyDown={handleKeyDown}
               rows={1}
-              placeholder="Écrire un message..."
+              placeholder={placeholder}
               disabled={loading || recording || toggleLoading}
-              className="min-h-[40px] max-h-[88px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
+              className="min-h-[40px] max-h-[96px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
             />
           </div>
 
-          {hasText ? (
+          {canSend ? (
             <button
               type="button"
               aria-label="Envoyer le message"
-              onClick={() => void handleSubmit()}
-              disabled={loading || !hasText}
+              onClick={() => void (hasAttachment ? sendMediaFile(selectedFile as File) : handleTextSubmit())}
+              disabled={loading || !canSend}
               className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/10 text-[var(--app-fg)] shadow-[0_10px_28px_rgba(0,0,0,0.18)] transition hover:scale-105 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <svg
