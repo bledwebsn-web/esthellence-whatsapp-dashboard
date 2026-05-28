@@ -283,9 +283,9 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-                    <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+                              <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-slate-200 bg-slate-50 text-slate-950 dark:border-white/10 dark:bg-[#050509] dark:text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
             <div className="space-y-3">
-              <section className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Lead
                 </div>
@@ -300,7 +300,7 @@ export default async function ConversationDetailPage({
                     className={`mt-2 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                       autoReplyEnabled
                         ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
-                        : "border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
+                        : "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
                     }`}
                   >
                     {autoReplyEnabled ? "Auto-réponse active" : "Auto-réponse désactivée"}
@@ -308,76 +308,54 @@ export default async function ConversationDetailPage({
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Statut
                 </div>
-                <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] p-3">
-                  <LeadStatusSelect
-                    conversationId={conversation.id}
-                    currentStatus={conversation.status}
-                  />
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900">
+                  <LeadStatusSelect conversationId={conversation.id} currentStatus={conversation.status} />
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Qualification
                 </div>
-                <div className="divide-y divide-slate-200 dark:divide-white/10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] px-3">
-                  <SidebarRow
-                    label="Urgence"
-                    value={formatField(conversation.urgency_level ?? "normal")}
-                  />
-                  <SidebarRow
-                    label="Langue"
-                    value={formatField(conversation.detected_language)}
-                  />
-                  <SidebarRow
-                    label="Intention"
-                    value={formatField(conversation.detected_intent)}
-                  />
-                  <SidebarRow
-                    label="Statut IA"
-                    value={formatField(conversation.ai_suggested_status)}
-                  />
+                <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-slate-50 px-3 dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.03]">
+                  <SidebarRow label="Urgence" value={formatField(conversation.urgency_level ?? "normal")} />
+                  <SidebarRow label="Langue" value={formatField(conversation.detected_language)} />
+                  <SidebarRow label="Intention" value={formatField(conversation.detected_intent)} />
+                  <SidebarRow label="Statut IA" value={formatField(conversation.ai_suggested_status)} />
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
+              <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
-                  R�sum� IA
+                  Résumé IA
                 </div>
-                <ConversationSummaryCard
-                  conversationId={conversation.id}
-                  initialSummary={conversation.ai_summary}
-                  embedded
-                  showHeader={false}
-                />
+                <ConversationSummaryCard conversationId={conversation.id} initialSummary={conversation.ai_summary} embedded showHeader={false} />
               </section>
 
               {isMediaReceived && mediaReviewLabel ? (
-                <section className="rounded-xl border border-amber-400/20 bg-amber-50 dark:bg-[var(--app-warning-bg)] p-4 text-sm text-slate-950 dark:text-slate-100">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
-                    M�dia re�u
+                <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-950 dark:border-amber-400/20 dark:bg-[var(--app-warning-bg)] dark:text-slate-100">
+                  <div className="text-[11px] font-semibold tracking-[0.08em] text-amber-700 dark:text-amber-200">
+                    Média reçu
                   </div>
                   <div className="mt-1 leading-6">{mediaReviewLabel}</div>
                 </section>
               ) : null}
 
-              <details className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 shadow-sm dark:shadow-none">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-950 dark:text-white">
-                  D�cisions IA r�centes
+              <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
+                <summary className="cursor-pointer list-none text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  Décisions IA récentes
                 </summary>
                 <div className="mt-3 space-y-2">
                   {autoReplyLogs.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 dark:border-white/10 px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
-                      Aucune d�cision auto-r�ponse pour le moment.
+                    <div className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
+                      Aucune décision auto-réponse pour le moment.
                     </div>
                   ) : (
-                    autoReplyLogs.map((log) => (
-                      <AutoReplyLogCard key={log.id} log={log} />
-                    ))
+                    autoReplyLogs.map((log) => <AutoReplyLogCard key={log.id} log={log} />)
                   )}
                 </div>
               </details>
