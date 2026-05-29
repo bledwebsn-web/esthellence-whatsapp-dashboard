@@ -354,18 +354,18 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050509] dark:text-slate-100">
-      <div className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-xl dark:border-white/10 dark:bg-[#050509]/90">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
+      <div className="sticky top-0 z-30 border-b border-[color:var(--app-border)] bg-[var(--app-header)] backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Conversations</h1>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
+                <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-3 py-1 text-xs font-medium text-[var(--app-fg)]">
                   {stats.total} conversations
                 </span>
               </div>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              <p className="mt-1 text-sm text-[var(--app-muted)]">
                 Leads WhatsApp Esthellence
               </p>
             </div>
@@ -376,24 +376,24 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                 type="button"
                 onClick={() => void handleRefresh()}
                 disabled={refreshing}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]"
+                className="inline-flex items-center justify-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {refreshing ? "Actualisation…" : "Rafraîchir"}
               </button>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Total conversations" value={stats.total} />
-            <StatCard label="À traiter" value={stats.pending} />
-            <StatCard label="Qualifiés" value={stats.qualified} />
-            <StatCard label="Besoin humain" value={stats.needsHuman} />
+          <div className="mt-4 flex flex-wrap gap-2 overflow-x-auto pb-1">
+            <StatPill label="Total" value={stats.total} />
+            <StatPill label="À traiter" value={stats.pending} />
+            <StatPill label="Qualifiés" value={stats.qualified} />
+            <StatPill label="Humain" value={stats.needsHuman} />
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
+        <div className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm backdrop-blur sm:p-5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
             <label className="relative block">
               <span className="sr-only">Rechercher un lead, téléphone, message…</span>
@@ -401,7 +401,7 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Rechercher un lead, téléphone, message…"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-cyan-400/50 dark:border-white/10 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-fg)] outline-none transition placeholder:text-[var(--app-muted)] focus:border-cyan-400/50"
               />
             </label>
 
@@ -415,7 +415,7 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                   setTreatmentFilter("all");
                   setIntentFilter("all");
                 }}
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/[0.06]"
+                className="inline-flex h-11 items-center justify-center rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 text-sm font-medium text-[var(--app-muted)] transition hover:bg-[var(--app-panel-strong)]"
               >
                 Réinitialiser
               </button>
@@ -468,20 +468,20 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                   <Link
                     key={conversation.conversation_id}
                     href={`/conversations/${conversation.conversation_id}`}
-                    className="group block rounded-3xl border border-slate-200 bg-white p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/60 hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-cyan-400/40 dark:hover:bg-white/[0.06] dark:hover:shadow-[0_18px_48px_rgba(0,0,0,0.28)] sm:p-5"
+                    className="group block rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] sm:p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="truncate text-base font-semibold text-slate-950 dark:text-white">
+                          <div className="truncate text-base font-semibold text-[var(--app-fg)]">
                             {displayName}
                           </div>
                           {treatment.needsHuman ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700">
                               Humain requis
                             </span>
                           ) : (
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
                               IA OK
                             </span>
                           )}
@@ -494,16 +494,16 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                           </span>
                         </div>
 
-                        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <div className="mt-1 text-sm text-[var(--app-muted)]">
                           {phone}
                         </div>
 
                         <div className="mt-4 space-y-2">
-                          <div className="text-sm leading-6 text-slate-700 dark:text-slate-200">
+                          <div className="text-sm leading-6 text-[var(--app-fg)]">
                             {lastMessage}
                           </div>
                           {conversation.ai_summary ? (
-                            <div className="max-w-3xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            <div className="max-w-3xl text-sm leading-6 text-[var(--app-muted)]">
                               {normalizeWhitespace(conversation.ai_summary)}
                             </div>
                           ) : null}
@@ -511,10 +511,10 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                       </div>
 
                       <div className="flex shrink-0 flex-col items-start gap-2 lg:items-end">
-                        <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                        <div className="text-sm font-medium text-[var(--app-fg)]">
                           {formatRelativeDate(lastMessageAt)}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="text-xs text-[var(--app-muted)]">
                           {conversation.message_count ?? 0} messages
                         </div>
                         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -530,20 +530,20 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                             }
                             className={
                               conversation.auto_reply_enabled === false
-                                ? "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+                                ? "border-slate-200 bg-slate-100 text-slate-600"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
                             }
                           />
                           {conversation.detected_language ? (
                             <Badge
                               label={conversation.detected_language}
-                              className="border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
+                              className="border-slate-200 bg-slate-100 text-slate-600"
                             />
                           ) : null}
                           {intentLabel !== "—" ? (
                             <Badge
                               label={intentLabel}
-                              className="border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
+                              className="border-slate-200 bg-slate-100 text-slate-600"
                             />
                           ) : null}
                         </div>
@@ -613,26 +613,24 @@ function FilterRow({
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatPill({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
-      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+    <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-1.5 text-sm text-[var(--app-fg)]">
+      <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--app-muted)]">
         {label}
-      </div>
-      <div className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
-        {value}
-      </div>
+      </span>
+      <span className="font-semibold">{value}</span>
     </div>
   );
 }
 
 function EmptyState({ hasQuery }: { hasQuery: boolean }) {
   return (
-    <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center dark:border-white/10 dark:bg-white/[0.03]">
-      <div className="text-base font-semibold text-slate-950 dark:text-white">
+    <div className="rounded-3xl border border-dashed border-[color:var(--app-border)] bg-[var(--app-panel)] px-6 py-16 text-center">
+      <div className="text-base font-semibold text-[var(--app-fg)]">
         {hasQuery ? "Aucun lead ne correspond à cette recherche." : "Aucune conversation pour le moment."}
       </div>
-      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+      <p className="mt-2 text-sm leading-6 text-[var(--app-muted)]">
         Saisissez les premiers leads WhatsApp depuis vos campagnes Meta Ads.
       </p>
     </div>
