@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import GlassIconButton from "@/components/GlassIconButton";
 import { WABASSIST_BADGE_SRC } from "@/components/ManualReplyForm";
 
 type ConversationMessage = {
@@ -526,33 +527,21 @@ export default function ConversationMessages({
       </div>
 
       {!isBottomVisible ? (
-        <button
-          type="button"
-          aria-label="Aller au dernier message"
-          onClick={() => {
-            scrollToBottom("smooth");
-            setHasNewMessages(false);
-          }}
-          className="absolute bottom-36 left-1/2 z-20 h-11 w-11 -translate-x-1/2 rounded-full border border-white/15 bg-slate-950/75 text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-200 hover:scale-105 hover:border-white/25 hover:bg-slate-900/85 sm:bottom-28 sm:h-12 sm:w-12"
-        >
-          <span className="relative flex h-full w-full items-center justify-center">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-5 w-5"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 5v14" />
-              <path d="m6 13 6 6 6-6" />
-            </svg>
-            {hasNewMessages ? (
-              <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
-            ) : null}
-          </span>
-        </button>
+      <GlassIconButton
+        onClick={() => {
+          scrollToBottom("smooth");
+          setHasNewMessages(false);
+        }}
+        src="/icons/actions/button-last-message.png"
+        alt="Dernier message"
+        ariaLabel="Aller au dernier message"
+        title="Dernier message"
+        className="absolute bottom-36 left-1/2 z-20 h-12 w-12 -translate-x-1/2 sm:bottom-28"
+      >
+        {hasNewMessages ? (
+          <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
+        ) : null}
+      </GlassIconButton>
       ) : null}
 
       {status === "error" ? (

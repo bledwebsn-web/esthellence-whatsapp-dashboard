@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import DashboardQuickLink from "@/components/DashboardQuickLink";
+import GlassIconButton from "@/components/GlassIconButton";
 import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm, {
@@ -242,14 +242,15 @@ export default async function ConversationDetailPage({
   return (
     <main className="h-screen overflow-hidden bg-[var(--app-bg)] text-slate-950 dark:text-white">
       <div className="flex h-full min-h-0 flex-col">
-        <header className="shrink-0 border-b border-slate-200 dark:border-white/10 bg-[var(--app-header)] px-4 backdrop-blur-md sm:px-6">
+        <header className="shrink-0 border-b border-slate-200 dark:border-white/10 bg-[var(--app-header)] px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur-md sm:px-6">
           <div className="flex h-14 items-center gap-3 sm:h-16">
-            <Link
+            <GlassIconButton
               href="/conversations"
-              className="inline-flex items-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-slate-950 dark:text-white transition hover:bg-slate-100 dark:bg-[var(--app-panel-strong)]"
-            >
-              Retour
-            </Link>
+              src="/icons/actions/button-back.png"
+              alt="Retour"
+              ariaLabel="Retour aux conversations"
+              title="Retour"
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
@@ -269,7 +270,7 @@ export default async function ConversationDetailPage({
             </div>
 
             <div className="flex items-center gap-2">
-              <DashboardQuickLink compact className="hidden sm:inline-flex" />
+              <DashboardQuickLink compact />
               <ThemeToggle />
               <div className="hidden items-center gap-2 text-xs text-slate-600 dark:text-slate-400 sm:flex">
                 <span className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-2.5 py-1">
@@ -288,10 +289,6 @@ export default async function ConversationDetailPage({
             </div>
           </div>
         </header>
-
-        <div className="border-b border-slate-200/70 bg-[var(--app-bg)] px-4 py-2 sm:hidden">
-          <DashboardQuickLink compact className="w-full justify-center text-xs" />
-        </div>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
                               <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] text-[var(--app-fg)] dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
