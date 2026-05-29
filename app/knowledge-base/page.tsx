@@ -1,3 +1,4 @@
+import DashboardQuickLink from "@/components/DashboardQuickLink";
 import KnowledgeBaseDashboard from "@/components/KnowledgeBaseDashboard";
 import { db } from "@/lib/db";
 
@@ -48,7 +49,16 @@ export default async function KnowledgeBasePage() {
   const clientId = await getEsthellenceClientId();
 
   if (!clientId) {
-    return <KnowledgeBaseDashboard initialItems={[]} />;
+    return (
+      <div className="bg-[var(--app-bg)] text-[color:var(--app-fg)]">
+        <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
+          <div className="flex justify-end">
+            <DashboardQuickLink compact className="text-xs sm:text-sm" />
+          </div>
+        </div>
+        <KnowledgeBaseDashboard initialItems={[]} />
+      </div>
+    );
   }
 
   const result = await db.query<KnowledgeBaseRow>(
@@ -82,5 +92,14 @@ export default async function KnowledgeBasePage() {
     updated_at: row.updated_at,
   }));
 
-  return <KnowledgeBaseDashboard initialItems={items} />;
+  return (
+    <div className="bg-[var(--app-bg)] text-[color:var(--app-fg)]">
+      <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex justify-end">
+          <DashboardQuickLink compact className="text-xs sm:text-sm" />
+        </div>
+      </div>
+      <KnowledgeBaseDashboard initialItems={items} />
+    </div>
+  );
 }

@@ -1,3 +1,4 @@
+import DashboardQuickLink from "@/components/DashboardQuickLink";
 import SettingsDashboard from "@/components/SettingsDashboard";
 import { getAiSettings } from "@/lib/ai-settings";
 import { db } from "@/lib/db";
@@ -157,5 +158,14 @@ async function loadExtendedSettings(): Promise<SettingsPageProps> {
 export default async function SettingsPage() {
   const initialSettings = await loadExtendedSettings();
 
-  return <SettingsDashboard initialSettings={initialSettings} />;
+  return (
+    <div className="bg-[var(--app-bg)] text-[color:var(--app-fg)]">
+      <div className="mx-auto max-w-7xl px-4 pt-3 sm:px-6 lg:px-8">
+        <div className="flex justify-end">
+          <DashboardQuickLink compact className="text-xs sm:text-sm" />
+        </div>
+      </div>
+      <SettingsDashboard initialSettings={initialSettings} />
+    </div>
+  );
 }

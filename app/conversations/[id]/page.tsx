@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import DashboardQuickLink from "@/components/DashboardQuickLink";
 import ConversationMessages from "@/components/ConversationMessages";
 import LeadStatusSelect from "@/components/LeadStatusSelect";
 import ManualReplyForm, {
@@ -268,6 +269,7 @@ export default async function ConversationDetailPage({
             </div>
 
             <div className="flex items-center gap-2">
+              <DashboardQuickLink compact className="hidden sm:inline-flex" />
               <ThemeToggle />
               <div className="hidden items-center gap-2 text-xs text-slate-600 dark:text-slate-400 sm:flex">
                 <span className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-2.5 py-1">
@@ -286,6 +288,10 @@ export default async function ConversationDetailPage({
             </div>
           </div>
         </header>
+
+        <div className="border-b border-slate-200/70 bg-[var(--app-bg)] px-4 py-2 sm:hidden">
+          <DashboardQuickLink compact className="w-full justify-center text-xs" />
+        </div>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
                               <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] text-[var(--app-fg)] dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
