@@ -536,7 +536,9 @@ export default function ConversationMessages({
         alt="Dernier message"
         ariaLabel="Aller au dernier message"
         title="Dernier message"
-        className="absolute bottom-36 left-1/2 z-20 h-12 w-12 -translate-x-1/2 sm:bottom-28"
+        size="lg"
+        className="absolute bottom-36 left-1/2 z-20 -translate-x-1/2 sm:bottom-28"
+        imgClassName="h-full w-full object-contain scale-[1.04]"
       >
         {hasNewMessages ? (
           <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />

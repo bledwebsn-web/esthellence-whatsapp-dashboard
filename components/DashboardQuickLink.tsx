@@ -16,8 +16,9 @@ export default function DashboardQuickLink({
       alt="Dashboard"
       ariaLabel="Retour au dashboard"
       title="Dashboard"
+      size={compact ? "md" : "lg"}
       className={className}
-      imgClassName="h-full w-full object-contain"
+      imgClassName="h-full w-full object-contain scale-[1.02]"
     />
   );
 }

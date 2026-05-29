@@ -250,6 +250,8 @@ export default async function ConversationDetailPage({
               alt="Retour"
               ariaLabel="Retour aux conversations"
               title="Retour"
+              size="md"
+              imgClassName="h-full w-full object-contain scale-[1.03]"
             />
 
             <div className="min-w-0 flex-1">
