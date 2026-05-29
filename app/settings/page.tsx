@@ -8,11 +8,6 @@ type StoredSettingsRow = {
   value: unknown;
 };
 
-type KnowledgeBaseStatsRow = {
-  total_count: number | null;
-  active_count: number | null;
-};
-
 type SettingsPageProps = {
   ai_mode: "suggestion_only" | "limited_auto_reply" | "autopilot";
   auto_reply_enabled: boolean;
@@ -23,20 +18,6 @@ type SettingsPageProps = {
   out_of_scope_message: string;
   media_received_message: string;
   after_hours_message: string;
-};
-
-type KnowledgeBaseStats = {
-  total: number;
-  active: number;
-};
-
-type TechnicalConfig = {
-  whatsappConfigured: boolean;
-  webhookConfigured: boolean;
-  groqConfigured: boolean;
-  groqTextModel: string;
-  mode: "development" | "production";
-  whatsappPhoneConfigured: boolean;
 };
 
 const SETTINGS_KEY = "wabassist_settings";
@@ -61,12 +42,16 @@ const DEFAULT_SETTINGS: SettingsPageProps = {
     "Cette demande nécessite une vérification par un conseiller. L’équipe va vous orienter.",
   media_received_message:
     "Nous avons bien reçu votre fichier. Un conseiller va le consulter et vous répondre.",
-  after_hours_message:
-    "Merci pour votre message. L’équipe vous répondra dès que possible.",
+  after_hours_message: "Merci pour votre message. L’équipe vous répondra dès que possible.",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeString(value: unknown, fallback: string) {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || fallback;
 }
 
 function normalizeUiIntents(value: unknown) {
@@ -116,11 +101,6 @@ function mapRuntimeIntentsToUiIntents(values: unknown) {
   mapped.push("fallback");
 
   return Array.from(new Set(mapped));
-}
-
-function normalizeString(value: unknown, fallback: string) {
-  const text = typeof value === "string" ? value.trim() : "";
-  return text || fallback;
 }
 
 async function loadExtendedSettings(): Promise<SettingsPageProps> {
@@ -174,66 +154,8 @@ async function loadExtendedSettings(): Promise<SettingsPageProps> {
   };
 }
 
-async function loadKnowledgeBaseStats(): Promise<KnowledgeBaseStats> {
-  const clientResult = await db.query(
-    `
-    select id
-    from clients
-    where name = $1
-    limit 1
-    `,
-    ["Esthellence"]
-  );
-
-  const clientId = clientResult.rows[0]?.id as string | undefined;
-
-  if (!clientId) {
-    return { total: 0, active: 0 };
-  }
-
-  const statsResult = await db.query<KnowledgeBaseStatsRow>(
-    `
-    select
-      count(*)::int as total_count,
-      count(*) filter (where coalesce(is_active, true))::int as active_count
-    from knowledge_base
-    where client_id = $1
-    `,
-    [clientId]
-  );
-
-  return {
-    total: statsResult.rows[0]?.total_count ?? 0,
-    active: statsResult.rows[0]?.active_count ?? 0,
-  };
-}
-
-function getTechnicalConfig(): TechnicalConfig {
-  return {
-    whatsappConfigured: Boolean(
-      process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID
-    ),
-    webhookConfigured: Boolean(process.env.WHATSAPP_VERIFY_TOKEN),
-    groqConfigured: Boolean(process.env.GROQ_API_KEY),
-    groqTextModel: process.env.GROQ_TEXT_MODEL ?? "llama-3.3-70b-versatile",
-    mode: process.env.NODE_ENV === "production" ? "production" : "development",
-    whatsappPhoneConfigured: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID),
-  };
-}
-
 export default async function SettingsPage() {
-  const [initialSettings, knowledgeBaseStats] = await Promise.all([
-    loadExtendedSettings(),
-    loadKnowledgeBaseStats(),
-  ]);
+  const initialSettings = await loadExtendedSettings();
 
-  const technicalConfig = getTechnicalConfig();
-
-  return (
-    <SettingsDashboard
-      initialSettings={initialSettings}
-      knowledgeBaseStats={knowledgeBaseStats}
-      technicalConfig={technicalConfig}
-    />
-  );
+  return <SettingsDashboard initialSettings={initialSettings} />;
 }

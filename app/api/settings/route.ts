@@ -18,10 +18,6 @@ type WabassistSettings = {
   after_hours_message: string;
 };
 
-type SettingsPayload = WabassistSettings & {
-  updated_at: string | null;
-};
-
 const SETTINGS_KEY = "wabassist_settings";
 const UI_INTENT_VALUES = [
   "pricing",
@@ -52,8 +48,7 @@ const DEFAULT_SETTINGS: WabassistSettings = {
     "Cette demande nécessite une vérification par un conseiller. L’équipe va vous orienter.",
   media_received_message:
     "Nous avons bien reçu votre fichier. Un conseiller va le consulter et vous répondre.",
-  after_hours_message:
-    "Merci pour votre message. L’équipe vous répondra dès que possible.",
+  after_hours_message: "Merci pour votre message. L’équipe vous répondra dès que possible.",
 };
 
 const RUNTIME_INTENT_MAP: Record<string, string[]> = {
@@ -161,12 +156,12 @@ async function ensureAppSettingsTable() {
   `);
 }
 
-async function readStoredSettings(): Promise<Partial<WabassistSettings> & { updated_at: string | null }> {
+async function readStoredSettings(): Promise<Partial<WabassistSettings>> {
   await ensureAppSettingsTable();
 
   const result = await db.query(
     `
-    select value, updated_at
+    select value
     from app_settings
     where key = $1
     limit 1
@@ -177,10 +172,7 @@ async function readStoredSettings(): Promise<Partial<WabassistSettings> & { upda
   const rawValue = result.rows[0]?.value;
 
   if (!isRecord(rawValue)) {
-    return {
-      ...DEFAULT_SETTINGS,
-      updated_at: result.rows[0]?.updated_at ?? null,
-    };
+    return { ...DEFAULT_SETTINGS };
   }
 
   return {
@@ -208,7 +200,6 @@ async function readStoredSettings(): Promise<Partial<WabassistSettings> & { upda
       rawValue.after_hours_message,
       DEFAULT_SETTINGS.after_hours_message
     ),
-    updated_at: result.rows[0]?.updated_at ?? null,
   };
 }
 
@@ -271,12 +262,13 @@ async function saveExtendedSettings(settings: WabassistSettings) {
   );
 }
 
-async function getResponsePayload() {
+async function getResponsePayload(): Promise<WabassistSettings> {
   const coreSettings = await getAiSettings();
   const storedSettings = await readStoredSettings();
 
-  const merged: SettingsPayload = {
-    ai_mode: storedSettings.ai_mode ?? coreSettings.mode,
+  return {
+    ai_mode:
+      storedSettings.ai_mode ?? (coreSettings.mode === "autopilot" ? DEFAULT_SETTINGS.ai_mode : coreSettings.mode),
     auto_reply_enabled:
       storedSettings.ai_mode === "suggestion_only"
         ? false
@@ -296,10 +288,7 @@ async function getResponsePayload() {
       storedSettings.media_received_message ?? DEFAULT_SETTINGS.media_received_message,
     after_hours_message:
       storedSettings.after_hours_message ?? DEFAULT_SETTINGS.after_hours_message,
-    updated_at: storedSettings.updated_at ?? null,
   };
-
-  return merged;
 }
 
 export async function GET() {
@@ -326,9 +315,7 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const payload = sanitizePayload(body);
-    const runtimeAllowedIntents = mapUiIntentsToRuntimeIntents(
-      payload.allowed_auto_reply_intents
-    );
+    const runtimeAllowedIntents = mapUiIntentsToRuntimeIntents(payload.allowed_auto_reply_intents);
 
     await saveAiSettings({
       mode: payload.ai_mode,
@@ -346,7 +333,8 @@ export async function PATCH(request: Request) {
       settings,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Impossible de sauvegarder les réglages.";
+    const message =
+      error instanceof Error ? error.message : "Impossible de sauvegarder les réglages.";
 
     return Response.json(
       {
