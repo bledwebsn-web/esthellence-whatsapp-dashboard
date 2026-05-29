@@ -49,6 +49,20 @@ function toBoolean(value: unknown) {
   return typeof value === "boolean" ? value : null;
 }
 
+function mapRow(row: KnowledgeBaseRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.category,
+    question: row.question,
+    answer: row.answer,
+    keywords: normalizeKeywords(row.keywords),
+    is_active: row.is_active ?? true,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 export async function GET() {
   try {
     const clientId = await getEsthellenceClientId();
@@ -77,17 +91,7 @@ export async function GET() {
     );
 
     return Response.json({
-      items: result.rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        category: row.category,
-        question: row.question,
-        answer: row.answer,
-        keywords: normalizeKeywords(row.keywords),
-        is_active: row.is_active ?? true,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      })),
+      items: result.rows.map(mapRow),
     });
   } catch (error) {
     console.error("Failed to fetch knowledge base:", error);
@@ -116,13 +120,14 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const title = String(body.title ?? "").trim();
-    const category = String(body.category ?? "").trim();
+    const titleInput = String(body.title ?? "").trim();
     const question = String(body.question ?? "").trim();
     const answer = String(body.answer ?? "").trim();
+    const category = String(body.category ?? "").trim();
+    const title = titleInput || question.slice(0, 120).trim();
     const keywords = parseKeywordsForDatabase(body.keywords);
 
-    if (!title || !category || !question || !answer) {
+    if (!title || !answer) {
       return Response.json(
         {
           success: false,
@@ -132,16 +137,29 @@ export async function POST(request: Request) {
       );
     }
 
-    await db.query(
+    const inserted = await db.query<KnowledgeBaseRow>(
       `
       insert into knowledge_base
       (client_id, title, category, question, answer, keywords, is_active)
       values ($1, $2, $3, $4, $5, $6, $7)
+      returning
+        id,
+        title,
+        category,
+        question,
+        answer,
+        keywords,
+        is_active,
+        created_at,
+        updated_at
       `,
       [clientId, title, category, question, answer, keywords, true]
     );
 
-    return Response.json({ success: true });
+    return Response.json({
+      success: true,
+      item: inserted.rows[0] ? mapRow(inserted.rows[0]) : null,
+    });
   } catch (error) {
     console.error("Failed to create knowledge base item:", error);
 
@@ -184,36 +202,33 @@ export async function PATCH(request: Request) {
 
     const fields: string[] = [];
     const values: unknown[] = [];
-    let index = 1;
+    const add = (value: unknown) => {
+      values.push(value);
+      return `$${values.length}`;
+    };
 
     if (Object.prototype.hasOwnProperty.call(body, "is_active")) {
-      fields.push(`is_active = $${index++}`);
-      values.push(toBoolean(body.is_active));
+      fields.push(`is_active = ${add(toBoolean(body.is_active))}`);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "title")) {
-      fields.push(`title = $${index++}`);
-      values.push(String(body.title ?? "").trim());
+      fields.push(`title = ${add(String(body.title ?? "").trim())}`);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "category")) {
-      fields.push(`category = $${index++}`);
-      values.push(String(body.category ?? "").trim());
+      fields.push(`category = ${add(String(body.category ?? "").trim())}`);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "question")) {
-      fields.push(`question = $${index++}`);
-      values.push(String(body.question ?? "").trim());
+      fields.push(`question = ${add(String(body.question ?? "").trim())}`);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "answer")) {
-      fields.push(`answer = $${index++}`);
-      values.push(String(body.answer ?? "").trim());
+      fields.push(`answer = ${add(String(body.answer ?? "").trim())}`);
     }
 
     if (Object.prototype.hasOwnProperty.call(body, "keywords")) {
-      fields.push(`keywords = $${index++}`);
-      values.push(parseKeywordsForDatabase(body.keywords));
+      fields.push(`keywords = ${add(parseKeywordsForDatabase(body.keywords))}`);
     }
 
     if (!fields.length) {
@@ -227,19 +242,43 @@ export async function PATCH(request: Request) {
     }
 
     fields.push(`updated_at = now()`);
-    values.push(id, clientId);
+    const idPlaceholder = add(id);
+    const clientPlaceholder = add(clientId);
 
-    await db.query(
+    const updated = await db.query<KnowledgeBaseRow>(
       `
       update knowledge_base
       set ${fields.join(", ")}
-      where id = $${index++}
-        and client_id = $${index}
+      where id = ${idPlaceholder}
+        and client_id = ${clientPlaceholder}
+      returning
+        id,
+        title,
+        category,
+        question,
+        answer,
+        keywords,
+        is_active,
+        created_at,
+        updated_at
       `,
       values
     );
 
-    return Response.json({ success: true });
+    if (!updated.rows[0]) {
+      return Response.json(
+        {
+          success: false,
+          error: "Failed to update knowledge base item",
+        },
+        { status: 404 }
+      );
+    }
+
+    return Response.json({
+      success: true,
+      item: mapRow(updated.rows[0]),
+    });
   } catch (error) {
     console.error("Failed to update knowledge base item:", error);
 

@@ -160,6 +160,8 @@ export async function POST(request: Request) {
     try {
       await connection.query("begin");
 
+      let imported = 0;
+
       for (const row of rows) {
         await connection.query(
           `
@@ -177,17 +179,18 @@ export async function POST(request: Request) {
             true,
           ]
         );
+        imported += 1;
       }
 
       await connection.query("commit");
+
+      return Response.json({ success: true, imported });
     } catch (error) {
       await connection.query("rollback");
       throw error;
     } finally {
       connection.release();
     }
-
-    return Response.json({ success: true, imported: rows.length });
   } catch (error) {
     console.error("Failed to import knowledge base:", error);
 
