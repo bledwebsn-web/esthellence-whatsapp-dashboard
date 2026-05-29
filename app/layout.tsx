@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,31 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Esthellence WhatsApp Dashboard",
-  description: "Dashboard conversationnel Esthellence",
+  applicationName: "WABAssist Esthellence",
+  title: "WABAssist Esthellence",
+  description: "Gestion des leads WhatsApp Esthellence",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "WABAssist",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: [
+    { rel: "icon", url: "/favicon.png" },
+    { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
+    { rel: "icon", url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    { rel: "icon", url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+  ],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#050711",
 };
 
 const themeBootstrap = `(function () {
