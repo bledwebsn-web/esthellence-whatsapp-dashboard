@@ -27,22 +27,16 @@ type ButtonProps = BaseProps &
 type GlassIconButtonProps = LinkProps | ButtonProps;
 
 const sizeClassName: Record<NonNullable<BaseProps["size"]>, string> = {
-  sm: "h-11 w-11",
-  md: "h-12 w-12",
-  lg: "h-14 w-14",
-};
-
-const imageInsetClassName: Record<NonNullable<BaseProps["size"]>, string> = {
-  sm: "inset-[11%]",
-  md: "inset-[9%]",
-  lg: "inset-[8%]",
+  sm: "h-[46px] w-[46px]",
+  md: "h-[48px] w-[48px]",
+  lg: "h-[52px] w-[52px]",
 };
 
 const baseClassName =
-  "relative inline-flex items-center justify-center overflow-hidden rounded-full border border-slate-200/60 bg-white/30 text-slate-700 shadow-[0_12px_35px_rgba(15,23,42,0.14)] backdrop-blur-xl backdrop-saturate-150 transition duration-200 hover:scale-[1.03] hover:bg-white/40 active:scale-95 dark:border-white/15 dark:bg-slate-950/28 dark:text-slate-200 dark:shadow-[0_12px_35px_rgba(0,0,0,0.34)] dark:hover:bg-slate-950/38";
+  "relative inline-flex items-center justify-center overflow-hidden rounded-full border border-slate-200/60 bg-white/10 p-px text-slate-700 shadow-[0_8px_20px_rgba(15,23,42,0.1)] backdrop-blur-md backdrop-saturate-150 transition duration-200 hover:scale-[1.02] hover:bg-white/16 active:scale-95 dark:border-white/10 dark:bg-slate-950/10 dark:text-slate-200 dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] dark:hover:bg-slate-950/16";
 
 const imgClassName =
-  "h-full w-full object-contain pointer-events-none select-none drop-shadow-[0_1px_2px_rgba(15,23,42,0.18)]";
+  "block h-[96%] w-[96%] object-contain pointer-events-none select-none drop-shadow-[0_1px_1px_rgba(15,23,42,0.12)]";
 
 function IconImage({
   src,
@@ -66,17 +60,10 @@ export default function GlassIconButton(props: GlassIconButtonProps) {
   } = props as GlassIconButtonProps & { className?: string; imgClassName?: string };
 
   const buttonSizeClassName = sizeClassName[size];
-  const buttonImageInsetClassName = imageInsetClassName[size];
 
   const content = (
     <>
-      <span className={`absolute ${buttonImageInsetClassName} flex items-center justify-center`}>
-        <IconImage
-          src={src}
-          alt={alt}
-          className={`${customImgClassName} h-full w-full`}
-        />
-      </span>
+      <IconImage src={src} alt={alt} className={customImgClassName} />
       {children}
     </>
   );

@@ -93,7 +93,7 @@ export default async function ConversationsPage() {
 
   return (
     <div className="bg-[var(--app-bg)] text-[color:var(--app-fg)]">
-      <div className="mx-auto max-w-7xl px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-[calc(env(safe-area-inset-top)+8px)] sm:px-6 lg:px-8">
         <div className="flex justify-end">
           <DashboardQuickLink compact />
         </div>

@@ -242,7 +242,7 @@ export default async function ConversationDetailPage({
   return (
     <main className="h-screen overflow-hidden bg-[var(--app-bg)] text-slate-950 dark:text-white">
       <div className="flex h-full min-h-0 flex-col">
-        <header className="shrink-0 border-b border-slate-200 dark:border-white/10 bg-[var(--app-header)] px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur-md sm:px-6">
+        <header className="shrink-0 border-b border-slate-200 dark:border-white/10 bg-[var(--app-header)] px-4 pt-[calc(env(safe-area-inset-top)+8px)] backdrop-blur-md sm:px-6">
           <div className="flex h-14 items-center gap-3 sm:h-16">
             <GlassIconButton
               href="/conversations"
@@ -251,7 +251,7 @@ export default async function ConversationDetailPage({
               ariaLabel="Retour aux conversations"
               title="Retour"
               size="md"
-              imgClassName="h-full w-full object-contain scale-[1.08]"
+              imgClassName="object-contain scale-[1.02]"
             />
 
             <div className="min-w-0 flex-1">

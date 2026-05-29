@@ -18,7 +18,7 @@ export default function DashboardQuickLink({
       title="Dashboard"
       size={compact ? "md" : "lg"}
       className={className}
-      imgClassName="h-full w-full object-contain scale-[1.02]"
+      imgClassName="object-contain scale-[1.02]"
     />
   );
 }
