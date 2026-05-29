@@ -375,6 +375,7 @@ export default function KnowledgeBaseDashboard({
   const [importImportedCount, setImportImportedCount] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] = useState<EntryValues | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [createDraft, setCreateDraft] = useState<EntryValues>({
     title: "",
@@ -700,53 +701,80 @@ export default function KnowledgeBaseDashboard({
   return (
     <main className="min-h-screen bg-[var(--app-bg)] text-[var(--app-fg)]">
       <div className="sticky top-0 z-30 border-b border-[color:var(--app-border)] bg-[var(--app-header)] backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-muted)]">
-                Base de connaissances
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Réponses officielles utilisées par WABAssist
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--app-muted)]">
-                Rédigez, testez et activez uniquement les réponses validées par Esthellence pour
-                garder l’IA cohérente avec votre discours commercial.
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--app-muted)]">
+                  Base de connaissances
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStatsOpen((value) => !value)}
+                  className="inline-flex items-center gap-2 rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-1 text-[11px] font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                  aria-expanded={statsOpen}
+                  aria-label="Afficher ou masquer les statistiques"
+                >
+                  <span>Stats</span>
+                  <span className="text-[var(--app-muted)]">
+                    {metrics.active}/{metrics.total || 0}
+                  </span>
+                  <span
+                    className={`transition-transform duration-200 ${statsOpen ? "rotate-180" : ""}`}
+                    aria-hidden="true"
+                  >
+                    ▾
+                  </span>
+                </button>
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Réponses officielles utilisées par WABAssist
+                </h1>
+                <span className="hidden text-sm text-[var(--app-muted)] sm:inline">
+                  Rédigez, testez et activez vos réponses validées.
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
               <ThemeToggle />
               <button
                 type="button"
                 onClick={() => setCreateOpen((value) => !value)}
-                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-3 py-2 text-xs font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)] sm:px-4 sm:text-sm"
               >
-                {createOpen ? "Fermer l’ajout" : "Ajouter une entrée"}
+                {createOpen ? "Fermer" : "Ajouter"}
               </button>
               <button
                 type="button"
                 onClick={() => setImportOpen((value) => !value)}
-                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-3 py-2 text-xs font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)] sm:px-4 sm:text-sm"
               >
-                {importOpen ? "Fermer l’import" : "Importer CSV/TSV"}
+                {importOpen ? "Fermer" : "Importer"}
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <StatPill label="Actives" value={`${activeItems}/${totalItems || 0}`} />
-            <StatPill label="Prêtes WhatsApp" value={metrics.ready} />
-            <StatPill
-              label="Réponses longues"
-              value={items.filter((item) => getQuality(item) === "long").length}
-            />
-            <StatPill label="Incomplètes" value={metrics.incomplete} />
+          <div
+            className={`grid overflow-hidden transition-all duration-200 ${
+              statsOpen ? "mt-3 max-h-20 opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="flex flex-wrap gap-2">
+              <StatPill label="Actives" value={`${activeItems}/${totalItems || 0}`} />
+              <StatPill label="Prêtes WhatsApp" value={metrics.ready} />
+              <StatPill
+                label="Réponses longues"
+                value={items.filter((item) => getQuality(item) === "long").length}
+              />
+              <StatPill label="Incomplètes" value={metrics.incomplete} />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm backdrop-blur sm:p-5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <label className="relative block">
