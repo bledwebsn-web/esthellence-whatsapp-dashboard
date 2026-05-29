@@ -282,25 +282,24 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const isInbound = message.direction === "inbound";
   const isAiMessage = resolveMessageParty(message) === "ai";
   const whatsappStatus = getEffectiveDeliveryStatus(message);
+  const bubbleClassName = isInbound
+    ? "border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_8px_18px_rgba(15,23,42,0.08)] dark:border-white/10 dark:from-white/[0.08] dark:via-white/[0.05] dark:to-white/[0.04] dark:text-slate-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_18px_rgba(0,0,0,0.24)]"
+    : isAiMessage
+      ? "border-cyan-200/75 bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_22px_rgba(8,145,178,0.16)] dark:border-cyan-300/15 dark:from-cyan-400/22 dark:via-cyan-500/18 dark:to-cyan-600/14 dark:text-cyan-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_22px_rgba(8,145,178,0.14)]"
+      : "border-cyan-200/70 bg-gradient-to-b from-cyan-200 via-cyan-300 to-cyan-400 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_10px_22px_rgba(8,145,178,0.14)] dark:border-cyan-300/15 dark:from-cyan-400/20 dark:via-cyan-500/16 dark:to-cyan-600/12 dark:text-cyan-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_22px_rgba(8,145,178,0.12)]";
 
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`min-w-0 max-w-[88%] rounded-3xl border p-4 shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:max-w-[78%] lg:max-w-[72%] ${
-          isInbound
-            ? "border-[color:var(--app-inbound-border)] bg-[var(--app-inbound-bg)] text-[var(--app-fg)]"
-            : isAiMessage
-              ? "border-[color:var(--app-accent-border)] bg-gradient-to-br from-cyan-300 via-cyan-400 to-cyan-500 text-[var(--app-outbound-text)]"
-              : "border-[color:var(--app-accent-border)] bg-[var(--app-outbound-bg)] text-[var(--app-outbound-text)]"
-        }`}
+        className={`min-w-0 max-w-[88%] overflow-hidden rounded-[28px] border px-4 py-3.5 sm:max-w-[78%] lg:max-w-[72%] ${bubbleClassName}`}
       >
         <MediaContent message={message} />
 
         <div
-          className={`mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] ${
+          className={`mt-2 flex flex-wrap items-center gap-1.5 text-[11px] ${
             isInbound
-              ? "justify-start text-[var(--app-muted)]"
-              : "justify-end text-slate-700/90 dark:text-cyan-950/80"
+              ? "justify-start text-slate-500 dark:text-slate-400"
+              : "justify-end text-slate-700/90 dark:text-cyan-50/80"
           }`}
         >
           {isInbound ? (
@@ -317,7 +316,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   <span>WABAssist</span>
                 </span>
               ) : null}
-              <span className="text-slate-700/90 dark:text-cyan-950/80">
+              <span className="text-slate-700/90 dark:text-cyan-50/80">
                 {formatDateTime(message.created_at)}
               </span>
               <span className={getWhatsappTickClass(whatsappStatus)}>
@@ -511,7 +510,7 @@ export default function ConversationMessages({
             ) : null}
           </div>
 
-          <div className="space-y-4 sm:space-y-5">
+          <div className="space-y-5 sm:space-y-6">
             {messages.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-10 text-center text-sm text-[var(--app-muted)]">
                 Aucun message dans cette conversation.
@@ -538,7 +537,6 @@ export default function ConversationMessages({
         title="Dernier message"
         size="lg"
         className="absolute bottom-36 left-1/2 z-20 -translate-x-1/2 sm:bottom-28"
-        imgClassName="h-full w-full object-contain scale-[1.04]"
       >
         {hasNewMessages ? (
           <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.9)]" />
