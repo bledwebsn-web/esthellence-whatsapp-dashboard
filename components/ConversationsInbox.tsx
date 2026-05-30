@@ -458,7 +458,6 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
               {filteredConversations.map((conversation) => {
                 const treatment = getTreatmentState(conversation);
                 const statusLabel = normalizeStatus(conversation.status);
-                const intentLabel = normalizeIntent(conversation.detected_intent);
                 const lastMessage = getLastMessageLabel(conversation);
                 const lastMessageAt = conversation.last_message_at ?? conversation.created_at;
                 const phone = conversation.whatsapp_number ?? "—";
@@ -468,7 +467,8 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                   <Link
                     key={conversation.conversation_id}
                     href={`/conversations/${conversation.conversation_id}`}
-                    className="group block rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] sm:p-5"
+                    aria-label={`Ouvrir la conversation de ${displayName}`}
+                    className="group block rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30 sm:p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
@@ -477,14 +477,10 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                             {displayName}
                           </div>
                           {treatment.needsHuman ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700">
-                              Humain requis
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">
+                              Besoin humain
                             </span>
-                          ) : (
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                              IA OK
-                            </span>
-                          )}
+                          ) : null}
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusBadgeClass(
                               conversation.status
@@ -494,19 +490,13 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                           </span>
                         </div>
 
-                        <div className="mt-1 text-sm text-[var(--app-muted)]">
-                          {phone}
-                        </div>
+                        <div className="mt-1 text-sm text-[var(--app-muted)]">{phone}</div>
 
-                        <div className="mt-4 space-y-2">
-                          <div className="text-sm leading-6 text-[var(--app-fg)]">
-                            {lastMessage}
+                        <div className="mt-3 space-y-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--app-muted)]">
+                            Dernier message
                           </div>
-                          {conversation.ai_summary ? (
-                            <div className="max-w-3xl text-sm leading-6 text-[var(--app-muted)]">
-                              {normalizeWhitespace(conversation.ai_summary)}
-                            </div>
-                          ) : null}
+                          <div className="text-sm leading-6 text-[var(--app-fg)]">{lastMessage}</div>
                         </div>
                       </div>
 
@@ -534,18 +524,6 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                                 : "border-emerald-200 bg-emerald-50 text-emerald-700"
                             }
                           />
-                          {conversation.detected_language ? (
-                            <Badge
-                              label={conversation.detected_language}
-                              className="border-slate-200 bg-slate-100 text-slate-600"
-                            />
-                          ) : null}
-                          {intentLabel !== "—" ? (
-                            <Badge
-                              label={intentLabel}
-                              className="border-slate-200 bg-slate-100 text-slate-600"
-                            />
-                          ) : null}
                         </div>
                       </div>
                     </div>
