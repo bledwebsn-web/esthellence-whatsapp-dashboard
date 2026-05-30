@@ -141,7 +141,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
               />
             </a>
           {hasCaption ? (
-            <div className="whitespace-pre-wrap text-sm leading-6">{content}</div>
+            <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div>
           ) : null}
         </div>
       );
@@ -154,7 +154,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
             ? "Sticker reçu — média indisponible"
             : "Image reçue — média indisponible"}
         </div>
-        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
       </div>
     );
   }
@@ -185,7 +185,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
             </div>
           </div>
           <audio controls preload="none" src={mediaUrl} className="w-full" />
-          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+          {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
         </div>
       );
     }
@@ -195,7 +195,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
         <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
           Message vocal — média indisponible
         </div>
-        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
       </div>
     );
   }
@@ -236,7 +236,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
               </div>
             </div>
           </div>
-          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+          {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
         </div>
       );
     }
@@ -246,7 +246,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
         <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
           Document reçu — média indisponible
         </div>
-        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
       </div>
     );
   }
@@ -260,7 +260,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
             src={mediaUrl}
             className="max-h-[300px] w-full rounded-2xl object-contain sm:max-h-[360px]"
           />
-          {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+          {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
         </div>
       );
     }
@@ -270,12 +270,12 @@ function MediaContent({ message }: { message: ConversationMessage }) {
         <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
           Vidéo reçue — média indisponible
         </div>
-        {hasCaption ? <div className="whitespace-pre-wrap text-sm leading-6">{content}</div> : null}
+        {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
       </div>
     );
   }
 
-  return <div className="whitespace-pre-wrap text-sm leading-6 sm:text-[15px]">{content || "Message sans contenu"}</div>;
+  return <div className="whitespace-pre-wrap text-[15px] leading-6">{content || "Message sans contenu"}</div>;
 }
 
 function MessageBubble({ message }: { message: ConversationMessage }) {
@@ -283,15 +283,15 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const isAiMessage = resolveMessageParty(message) === "ai";
   const whatsappStatus = getEffectiveDeliveryStatus(message);
   const bubbleClassName = isInbound
-    ? "border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_8px_18px_rgba(15,23,42,0.08)] dark:border-white/10 dark:from-white/[0.08] dark:via-white/[0.05] dark:to-white/[0.04] dark:text-slate-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_8px_18px_rgba(0,0,0,0.24)]"
+    ? "border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_18px_rgba(15,23,42,0.08)] dark:border-white/10 dark:from-slate-900 dark:via-slate-900/96 dark:to-slate-800/90 dark:text-slate-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_8px_18px_rgba(0,0,0,0.28)]"
     : isAiMessage
-      ? "border-cyan-200/75 bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_22px_rgba(8,145,178,0.16)] dark:border-cyan-300/15 dark:from-cyan-400/22 dark:via-cyan-500/18 dark:to-cyan-600/14 dark:text-cyan-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_22px_rgba(8,145,178,0.14)]"
-      : "border-cyan-200/70 bg-gradient-to-b from-cyan-200 via-cyan-300 to-cyan-400 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_10px_22px_rgba(8,145,178,0.14)] dark:border-cyan-300/15 dark:from-cyan-400/20 dark:via-cyan-500/16 dark:to-cyan-600/12 dark:text-cyan-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_22px_rgba(8,145,178,0.12)]";
+      ? "border-cyan-200/75 bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_22px_rgba(8,145,178,0.16)] dark:border-cyan-300/15 dark:from-cyan-500/34 dark:via-cyan-600/26 dark:to-cyan-700/22 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_22px_rgba(8,145,178,0.14)]"
+      : "border-cyan-200/70 bg-gradient-to-b from-cyan-200 via-cyan-300 to-cyan-400 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_10px_22px_rgba(8,145,178,0.14)] dark:border-cyan-300/15 dark:from-cyan-500/26 dark:via-cyan-600/20 dark:to-cyan-700/16 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_22px_rgba(8,145,178,0.12)]";
 
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
       <div
-        className={`min-w-0 max-w-[88%] overflow-hidden rounded-[28px] border px-4 py-3.5 sm:max-w-[78%] lg:max-w-[72%] ${bubbleClassName}`}
+        className={`min-w-0 max-w-[88%] overflow-hidden rounded-[28px] border px-4 py-3.5 text-[15px] leading-6 sm:max-w-[78%] lg:max-w-[72%] ${bubbleClassName}`}
       >
         <MediaContent message={message} />
 
@@ -299,7 +299,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           className={`mt-2 flex flex-wrap items-center gap-1.5 text-[11px] ${
             isInbound
               ? "justify-start text-slate-500 dark:text-slate-400"
-              : "justify-end text-slate-700/90 dark:text-cyan-50/80"
+              : "justify-end text-slate-700/90 dark:text-cyan-50/85"
           }`}
         >
           {isInbound ? (
@@ -316,7 +316,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   <span>WABAssist</span>
                 </span>
               ) : null}
-              <span className="text-slate-700/90 dark:text-cyan-50/80">
+              <span className="text-slate-700/90 dark:text-cyan-50/85">
                 {formatDateTime(message.created_at)}
               </span>
               <span className={getWhatsappTickClass(whatsappStatus)}>
