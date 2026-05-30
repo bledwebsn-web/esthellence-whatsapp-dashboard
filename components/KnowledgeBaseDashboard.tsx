@@ -199,10 +199,14 @@ function EntryEditor({
   hint?: string;
 }) {
   return (
-    <form onSubmit={onSubmit} className="grid gap-4">
-      {hint ? <p className="text-sm leading-6 text-[var(--app-muted)]">{hint}</p> : null}
+    <form onSubmit={onSubmit} className="grid gap-3">
+      {hint ? (
+        <p className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm leading-6 text-[var(--app-muted)]">
+          {hint}
+        </p>
+      ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <EntryField label="Titre" hint="Obligatoire si la question est vide">
           <input
             value={value.title}
@@ -731,9 +735,6 @@ export default function KnowledgeBaseDashboard({
                 <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
                   Réponses officielles utilisées par WABAssist
                 </h1>
-                <span className="hidden text-sm text-[var(--app-muted)] sm:inline">
-                  Rédigez, testez et activez vos réponses validées.
-                </span>
               </div>
             </div>
 
@@ -764,10 +765,7 @@ export default function KnowledgeBaseDashboard({
             <div className="flex flex-wrap gap-2">
               <StatPill label="Actives" value={`${activeItems}/${totalItems || 0}`} />
               <StatPill label="Prêtes WhatsApp" value={metrics.ready} />
-              <StatPill
-                label="Réponses longues"
-                value={items.filter((item) => getQuality(item) === "long").length}
-              />
+              <StatPill label="Réponses longues" value={items.filter((item) => getQuality(item) === "long").length} />
               <StatPill label="Incomplètes" value={metrics.incomplete} />
             </div>
           </div>
@@ -778,11 +776,11 @@ export default function KnowledgeBaseDashboard({
         <div className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm backdrop-blur sm:p-5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <label className="relative block">
-              <span className="sr-only">Rechercher une question, réponse, catégorie…</span>
+              <span className="sr-only">Rechercher une question, réponse, mot-clé…</span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher une question, réponse, catégorie…"
+                placeholder="Rechercher une question, réponse, mot-clé…"
                 className="w-full rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-fg)] outline-none transition placeholder:text-[var(--app-muted)] focus:border-cyan-400/50"
               />
             </label>
@@ -850,7 +848,7 @@ export default function KnowledgeBaseDashboard({
               </p>
               <h2 className="text-lg font-semibold">Nouvelle réponse officielle</h2>
               <p className="text-sm leading-6 text-[var(--app-muted)]">
-                Gardez les réponses courtes, claires et prêtes à être envoyées sur WhatsApp.
+                Restez court, clair et prêt à être envoyé sur WhatsApp.
               </p>
             </div>
 
@@ -876,8 +874,7 @@ export default function KnowledgeBaseDashboard({
               </p>
               <h2 className="text-lg font-semibold">Importer un CSV ou TSV</h2>
               <p className="text-sm leading-6 text-[var(--app-muted)]">
-                Colonnes reconnues : Titre, Catégorie, Question probable du lead, Réponse officielle WhatsApp,
-                Mots-clés.
+                Colonnes reconnues : Titre, Catégorie, Question, Réponse officielle WhatsApp, Mots-clés.
               </p>
             </div>
 
@@ -927,7 +924,7 @@ export default function KnowledgeBaseDashboard({
               return (
                 <article
                   key={item.id}
-                  className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm transition hover:bg-[var(--app-panel-soft)] sm:p-5"
+                  className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm shadow-slate-950/5 transition-all duration-150 hover:-translate-y-[1px] hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] dark:shadow-black/20 dark:hover:shadow-[0_12px_28px_rgba(0,0,0,0.30)] sm:p-5"
                 >
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
@@ -949,43 +946,45 @@ export default function KnowledgeBaseDashboard({
                         {question || "Question manquante"}
                       </div>
 
-                      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                        <div className="rounded-[26px] border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4">
+                      <div className="mt-4 rounded-[26px] border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--app-muted)]">
-                            Question probable
+                            Aperçu WhatsApp
                           </div>
-                          <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-inbound-bg)] px-4 py-3 text-sm leading-6 text-[var(--app-fg)]">
-                            {question || "Question manquante."}
-                          </div>
-                        </div>
-
-                        <div className="rounded-[26px] border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--app-muted)]">
-                              Réponse officielle WhatsApp
-                            </div>
-                            {isLongAnswer ? (
-                              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                                Réponse longue
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-inbound-bg)] px-4 py-3 text-sm leading-6 text-[var(--app-fg)] whitespace-pre-line">
-                            {answerPreview}
-                          </div>
-
                           {isLongAnswer ? (
-                            <details className="mt-3">
-                              <summary className="cursor-pointer text-xs font-medium text-[var(--app-accent)]">
-                                Voir plus
-                              </summary>
-                              <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-inbound-bg)] px-4 py-3 text-sm leading-6 whitespace-pre-line text-[var(--app-fg)]">
-                                {answer || "Réponse manquante."}
-                              </div>
-                            </details>
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                              Réponse longue
+                            </span>
                           ) : null}
                         </div>
+
+                        <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-inbound-bg)] px-4 py-3 text-sm leading-6 whitespace-pre-line text-[var(--app-fg)]">
+                          <div
+                            className="overflow-hidden"
+                            style={
+                              isLongAnswer
+                                ? {
+                                    display: "-webkit-box",
+                                    WebkitBoxOrient: "vertical",
+                                    WebkitLineClamp: 4,
+                                  }
+                                : undefined
+                            }
+                          >
+                            {answerPreview}
+                          </div>
+                        </div>
+
+                        {isLongAnswer ? (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-xs font-medium text-[var(--app-accent)]">
+                              Voir plus
+                            </summary>
+                            <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-inbound-bg)] px-4 py-3 text-sm leading-6 whitespace-pre-line text-[var(--app-fg)]">
+                              {answer || "Réponse manquante."}
+                            </div>
+                          </details>
+                        ) : null}
                       </div>
 
                       <div className="mt-4">
@@ -1016,37 +1015,31 @@ export default function KnowledgeBaseDashboard({
                               ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
                               : quality === "long"
                                 ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200"
-                                : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
+                              : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
                           }
                         />
-                        {!item.is_active ? (
-                          <Badge
-                            label="Base inactive"
-                            className="border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
-                          />
-                        ) : null}
                       </div>
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-2 xl:items-end">
-                      <div className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                      <div className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-muted)]">
                         Créé le {formatDate(item.created_at)}
                       </div>
-                      <div className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-fg)]">
+                      <div className="rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-3 text-sm text-[var(--app-muted)]">
                         Mis à jour le {formatDate(item.updated_at)}
                       </div>
                       <div className="flex flex-wrap gap-2 xl:justify-end">
                         <button
                           type="button"
                           onClick={() => startEdit(item)}
-                          className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                          className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
                         >
                           Modifier
                         </button>
                         <button
                           type="button"
                           onClick={() => void handleToggleActive(item)}
-                          className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
+                          className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 text-sm font-medium text-[var(--app-fg)] transition hover:bg-[var(--app-panel-strong)]"
                         >
                           {item.is_active ? "Désactiver" : "Activer"}
                         </button>
