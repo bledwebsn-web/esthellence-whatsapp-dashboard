@@ -149,7 +149,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
 
     return (
       <div className="space-y-2">
-        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
           {messageType === "sticker"
             ? "Sticker reçu — média indisponible"
             : "Image reçue — média indisponible"}
@@ -181,7 +181,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
             </span>
             <div>
               <div className="font-medium">Message vocal</div>
-              <div className="text-[12px] opacity-80">Audio WhatsApp</div>
+              <div className="text-[12px] text-slate-600 dark:text-slate-400">Audio WhatsApp</div>
             </div>
           </div>
           <audio controls preload="none" src={mediaUrl} className="w-full" />
@@ -192,7 +192,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
 
     return (
       <div className="space-y-2">
-        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
           Message vocal — média indisponible
         </div>
         {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
@@ -222,14 +222,14 @@ function MediaContent({ message }: { message: ConversationMessage }) {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{message.media_filename ?? "Document"}</div>
-                <div className="text-[12px] text-[var(--app-muted)]">
+                <div className="text-[12px] text-slate-600 dark:text-slate-400">
                   {message.media_mime_type ?? "application/octet-stream"}
                 </div>
                 <a
                   href={mediaUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-2 inline-flex items-center rounded-full border border-[color:var(--app-border)] px-3 py-1 text-xs font-medium"
+                  className="mt-2 inline-flex items-center rounded-full border border-[color:var(--app-border)] px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200"
                 >
                   Télécharger
                 </a>
@@ -243,7 +243,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
 
     return (
       <div className="space-y-2">
-        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
           Document reçu — média indisponible
         </div>
         {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
@@ -267,7 +267,7 @@ function MediaContent({ message }: { message: ConversationMessage }) {
 
     return (
       <div className="space-y-2">
-        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-[var(--app-muted)]">
+        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-4 text-sm text-slate-600 dark:text-slate-400">
           Vidéo reçue — média indisponible
         </div>
         {hasCaption ? <div className="whitespace-pre-wrap text-[15px] leading-6">{content}</div> : null}
@@ -500,7 +500,7 @@ export default function ConversationMessages({
         className="h-full overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin]"
       >
         <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 pb-52 sm:pb-44">
-          <div className="flex items-center justify-between text-[11px] text-[var(--app-muted)]">
+          <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
               {liveLabel}
@@ -512,7 +512,7 @@ export default function ConversationMessages({
 
           <div className="space-y-5 sm:space-y-6">
             {messages.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-10 text-center text-sm text-[var(--app-muted)]">
+              <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] px-4 py-10 text-center text-sm text-slate-600 dark:text-slate-400">
                 Aucun message dans cette conversation.
               </div>
             ) : (
