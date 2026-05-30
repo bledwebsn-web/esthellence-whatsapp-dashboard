@@ -461,6 +461,9 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                 const lastMessage = getLastMessageLabel(conversation);
                 const lastMessageAt = conversation.last_message_at ?? conversation.created_at;
                 const phone = conversation.whatsapp_number ?? "—";
+                const messageCount = conversation.message_count ?? 0;
+                const languageLabel = conversation.detected_language?.trim() || "Langue inconnue";
+                const messageCountLabel = `${messageCount} message${messageCount > 1 ? "s" : ""}`;
                 const displayName = conversation.whatsapp_name?.trim() || phone;
 
                 return (
@@ -490,7 +493,23 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                           </span>
                         </div>
 
-                        <div className="mt-1 text-sm text-[var(--app-muted)]">{phone}</div>
+                        <div className="mt-1 flex flex-wrap items-center text-xs text-[var(--app-muted)]">
+                          <span className="truncate">{phone}</span>
+                          <span
+                            aria-hidden="true"
+                            className="mx-2 select-none text-slate-400 dark:text-slate-500"
+                          >
+                            |
+                          </span>
+                          <span>{messageCountLabel}</span>
+                          <span
+                            aria-hidden="true"
+                            className="mx-2 select-none text-slate-400 dark:text-slate-500"
+                          >
+                            |
+                          </span>
+                          <span className="truncate">{languageLabel}</span>
+                        </div>
 
                         <div className="mt-3 space-y-2">
                           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--app-muted)]">
