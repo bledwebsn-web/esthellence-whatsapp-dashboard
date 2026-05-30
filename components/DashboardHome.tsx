@@ -309,17 +309,23 @@ function computePriorityScore(conversation: DashboardConversationRow) {
 function Section({
   title,
   description,
+  titleClassName,
   children,
 }: {
   title: string;
   description?: string;
+  titleClassName?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-3.5 shadow-sm backdrop-blur-sm sm:p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-[15px] font-semibold text-[color:var(--app-fg)] sm:text-base">{title}</h2>
+          <h2
+            className={`text-lg font-semibold text-[color:var(--app-fg)] sm:text-xl ${titleClassName ?? ""}`}
+          >
+            {title}
+          </h2>
           {description ? (
             <p className="mt-1 text-sm leading-5 text-[color:var(--app-muted)]">{description}</p>
           ) : null}
@@ -626,9 +632,6 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
                 </span>
               </div>
               <h1 className="mt-1 text-[28px] font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-[color:var(--app-muted)]">
-                Vue rapide de l’activité, des conversations à traiter et des leads qualifiés issus des campagnes Meta Ads Click-to-WhatsApp.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -691,6 +694,7 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
             <Section
               title="À traiter maintenant"
               description="Les leads les plus importants à reprendre en priorité."
+              titleClassName="sm:text-2xl"
             >
               {data.priority_conversations.length > 0 ? (
                 <div className="grid gap-3">
@@ -709,10 +713,11 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
             <Section
               title="Activité récente"
               description="Les dernières conversations modifiées pour reprendre le fil rapidement."
+              titleClassName="sm:text-2xl"
             >
               {data.recent_conversations.length > 0 ? (
                 <div className="grid gap-3">
-                  {data.recent_conversations.map((conversation) => (
+                  {data.recent_conversations.slice(0, 2).map((conversation) => (
                     <ConversationCard key={conversation.conversation_id} conversation={conversation} compact />
                   ))}
                 </div>
