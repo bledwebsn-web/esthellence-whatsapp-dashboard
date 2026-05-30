@@ -316,11 +316,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-4 shadow-sm backdrop-blur sm:p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <section className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-3.5 shadow-sm backdrop-blur-sm sm:p-4">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-[color:var(--app-fg)] sm:text-lg">{title}</h2>
-          {description ? <p className="mt-1 text-sm leading-6 text-[color:var(--app-muted)]">{description}</p> : null}
+          <h2 className="text-[15px] font-semibold text-[color:var(--app-fg)] sm:text-base">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-sm leading-5 text-[color:var(--app-muted)]">{description}</p>
+          ) : null}
         </div>
       </div>
       {children}
@@ -339,27 +341,29 @@ function KpiCard({
   caption: string;
   tone?: "neutral" | "accent" | "emerald" | "amber" | "rose";
 }) {
-  const toneClass =
+  const accentClass =
     tone === "accent"
-      ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-700 dark:text-cyan-200"
+      ? "bg-cyan-400/70 dark:bg-cyan-300/70"
       : tone === "emerald"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+        ? "bg-emerald-500/70 dark:bg-emerald-300/70"
         : tone === "amber"
-          ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200"
+          ? "bg-amber-500/70 dark:bg-amber-300/70"
           : tone === "rose"
-            ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
-            : "border-slate-200 bg-slate-100 text-slate-700 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300";
+            ? "bg-rose-500/70 dark:bg-rose-300/70"
+            : "bg-slate-300 dark:bg-slate-500";
 
   return (
-    <div className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-4 shadow-sm">
+    <div className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-3 shadow-sm transition-colors hover:bg-[color:var(--app-panel-strong)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--app-muted)]">{label}</div>
-          <div className="mt-2 text-2xl font-semibold tracking-tight text-[color:var(--app-fg)]">{value}</div>
+          <div className={`mt-2 h-1.5 w-10 rounded-full ${accentClass}`} />
         </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toneClass}`}>KPI</span>
+        <div className="text-right">
+          <div className="text-[26px] font-semibold tracking-tight text-[color:var(--app-fg)] sm:text-[28px]">{value}</div>
+        </div>
       </div>
-      <p className="mt-3 text-sm leading-5 text-[color:var(--app-muted)]">{caption}</p>
+      <p className="mt-1.5 text-sm leading-5 text-[color:var(--app-muted)]">{caption}</p>
     </div>
   );
 }
@@ -375,33 +379,33 @@ function ConversationCard({
   const lastMessage = getLastMessageLabel(conversation);
 
   return (
-    <article className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-4 transition hover:bg-[color:var(--app-panel-strong)]">
+    <article className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-3 transition hover:bg-[color:var(--app-panel-strong)] sm:p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold text-[color:var(--app-fg)]">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <h3 className="truncate text-sm font-semibold text-[color:var(--app-fg)] sm:text-[15px]">
               {conversation.profile_name ?? conversation.phone ?? conversation.wa_id}
             </h3>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusBadgeClass(conversation.status)}`}>
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(conversation.status)}`}>
               {conversation.status || "nouveau"}
             </span>
-            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getUrgencyBadgeClass(conversation.urgency_level)}`}>
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getUrgencyBadgeClass(conversation.urgency_level)}`}>
               Urgence {getUrgencyLabel(conversation.urgency_level)}
             </span>
             {treatment.needsHuman ? (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
                 Humain requis
               </span>
             ) : null}
           </div>
-          <div className="mt-1 text-xs text-[color:var(--app-muted)]">
-            {conversation.phone ?? conversation.wa_id} • {conversation.message_count ?? 0} messages
-            {conversation.detected_language ? ` • ${conversation.detected_language}` : ""}
+          <div className="mt-1 text-[11px] leading-5 text-[color:var(--app-muted)] sm:text-xs">
+            {conversation.phone ?? conversation.wa_id} ? {conversation.message_count ?? 0} messages
+            {conversation.detected_language ? ` ? ${conversation.detected_language}` : ""}
           </div>
         </div>
         <Link
           href={`/conversations/${conversation.conversation_id}`}
-          className="inline-flex shrink-0 items-center rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-3 py-1.5 text-xs font-medium text-[color:var(--app-fg)] transition hover:bg-[color:var(--app-panel-strong)]"
+          className="inline-flex shrink-0 items-center rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--app-fg)] transition hover:bg-[color:var(--app-panel-strong)] sm:text-xs"
         >
           Ouvrir
         </Link>
@@ -416,20 +420,20 @@ function ConversationCard({
         </div>
 
         {!compact ? (
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-2.5 py-1 font-medium text-[color:var(--app-muted)]">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-2 py-0.5 font-medium text-[color:var(--app-muted)]">
               {getRelativeDate(conversation.last_message_at)}
             </span>
             {treatment.autoReplyActive ? (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-                Auto-réponse active
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
+                Auto-r?ponse active
               </span>
             ) : (
-              <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300">
-                Auto-réponse désactivée
+              <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300">
+                Auto-r?ponse d?sactiv?e
               </span>
             )}
-            <span className="rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-2.5 py-1 font-medium text-[color:var(--app-muted)]">
+            <span className="rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-2 py-0.5 font-medium text-[color:var(--app-muted)]">
               {getIntentLabel(treatment.intent)}
             </span>
           </div>
@@ -441,7 +445,7 @@ function ConversationCard({
 
 function SectionEmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-5 text-center">
+    <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-4 text-center">
       <div className="text-sm font-semibold text-[color:var(--app-fg)]">{title}</div>
       <p className="mt-1 text-sm leading-6 text-[color:var(--app-muted)]">{description}</p>
     </div>
@@ -460,10 +464,10 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-4 transition hover:bg-[color:var(--app-panel-strong)]"
+      className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-3.5 transition hover:bg-[color:var(--app-panel-strong)]"
     >
       <div className="text-sm font-semibold text-[color:var(--app-fg)]">{title}</div>
-      <p className="mt-1 text-sm leading-6 text-[color:var(--app-muted)]">{description}</p>
+      <p className="mt-1 text-sm leading-5 text-[color:var(--app-muted)]">{description}</p>
     </Link>
   );
 }
@@ -603,9 +607,9 @@ export async function loadDashboardData(): Promise<DashboardData> {
 export default function DashboardHome({ data }: { data: DashboardData }) {
   return (
     <main className="min-h-screen bg-[var(--app-bg)] text-[color:var(--app-fg)]">
-      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <header className="sticky top-0 z-20 mb-4 rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-header)] px-4 py-4 backdrop-blur-xl sm:px-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mx-auto max-w-7xl px-3 py-3 sm:px-5 lg:px-8">
+        <header className="sticky top-0 z-20 mb-4 rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-header)] px-3 py-3 backdrop-blur-xl sm:px-4 sm:py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--app-muted)]">
@@ -615,7 +619,7 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
                   Pilotage des leads WhatsApp Esthellence
                 </span>
               </div>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
+              <h1 className="mt-1 text-[28px] font-semibold tracking-tight sm:text-3xl">Dashboard</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-[color:var(--app-muted)]">
                 Vue rapide de l’activité, des conversations à traiter et des leads qualifiés issus des campagnes Meta Ads Click-to-WhatsApp.
               </p>
@@ -639,7 +643,7 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           <KpiCard
             label="Leads reçus"
             value={formatNumber(data.stats.total_conversations)}
@@ -676,7 +680,7 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
           />
         </section>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div className="space-y-6">
             <Section
               title="À traiter maintenant"
@@ -760,7 +764,7 @@ export default function DashboardHome({ data }: { data: DashboardData }) {
 
             <Section
               title="Accès rapide"
-              description="Les raccourcis pour les actions les plus utiles."
+              description="Les raccourcis essentiels pour agir vite."
             >
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <QuickLink
