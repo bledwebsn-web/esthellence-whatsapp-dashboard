@@ -29,6 +29,19 @@ export type SalesProfileRow = {
   updated_at: string | null;
 };
 
+export type KbGenerationRunRow = {
+  id: string;
+  client_id: string | null;
+  source_id: string | null;
+  profile_config_id: string | null;
+  status: string;
+  generated_items: unknown;
+  raw_ai_response: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
 async function getEsthellenceClientId() {
   const result = await db.query(
     `
@@ -86,6 +99,21 @@ export async function ensureProductConfigTables() {
       updated_at timestamptz default now()
     )
   `);
+
+  await db.query(`
+    create table if not exists kb_generation_runs (
+      id uuid primary key default gen_random_uuid(),
+      client_id uuid null,
+      source_id uuid null references product_sources(id) on delete set null,
+      profile_config_id uuid null references sales_profile_configs(id) on delete set null,
+      status text not null default 'generated',
+      generated_items jsonb not null default '[]'::jsonb,
+      raw_ai_response text null,
+      error_message text null,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now()
+    )
+  `);
 }
 
 export function getClientScopeFilter(clientId: string | null) {
@@ -130,6 +158,21 @@ export function mapProfileRow(row: SalesProfileRow) {
     qualification_questions: row.qualification_questions,
     constraints: row.constraints,
     is_default: row.is_default ?? false,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export function mapGenerationRunRow(row: KbGenerationRunRow) {
+  return {
+    id: row.id,
+    client_id: row.client_id,
+    source_id: row.source_id,
+    profile_config_id: row.profile_config_id,
+    status: row.status,
+    generated_items: Array.isArray(row.generated_items) ? row.generated_items : [],
+    raw_ai_response: row.raw_ai_response,
+    error_message: row.error_message,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

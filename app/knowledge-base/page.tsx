@@ -1,4 +1,5 @@
 import DashboardQuickLink from "@/components/DashboardQuickLink";
+import KnowledgeBaseDraftGenerator from "@/components/KnowledgeBaseDraftGenerator";
 import KnowledgeBaseDashboard from "@/components/KnowledgeBaseDashboard";
 import KnowledgeBaseProductConfig from "@/components/KnowledgeBaseProductConfig";
 import { db } from "@/lib/db";
@@ -103,6 +104,7 @@ export default async function KnowledgeBasePage() {
       <KnowledgeBaseDashboard initialItems={items} />
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <KnowledgeBaseProductConfig />
+        <KnowledgeBaseDraftGenerator />
       </div>
     </div>
   );
