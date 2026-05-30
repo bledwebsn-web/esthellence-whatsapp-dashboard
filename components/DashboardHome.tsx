@@ -381,7 +381,7 @@ function ConversationCard({
   return (
     <Link
       href={`/conversations/${conversation.conversation_id}`}
-      className="group block rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-3 text-left transition hover:border-[color:var(--app-fg)]/15 hover:bg-[color:var(--app-panel-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30 sm:p-3.5"
+      className="group block cursor-pointer rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-3 text-left shadow-sm shadow-slate-950/5 transition-all duration-150 transform-gpu hover:-translate-y-[1px] hover:border-[color:var(--app-fg)]/15 hover:bg-[color:var(--app-panel-strong)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--app-bg)] dark:shadow-black/20 dark:hover:shadow-[0_10px_24px_rgba(0,0,0,0.30)] sm:p-3.5"
       aria-label={`Ouvrir la conversation de ${conversation.profile_name ?? conversation.phone ?? conversation.wa_id}`}
     >
       <article className="space-y-3">

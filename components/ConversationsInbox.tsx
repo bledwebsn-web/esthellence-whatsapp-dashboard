@@ -471,7 +471,7 @@ export default function ConversationsInbox({ conversations }: ConversationsInbox
                     key={conversation.conversation_id}
                     href={`/conversations/${conversation.conversation_id}`}
                     aria-label={`Ouvrir la conversation de ${displayName}`}
-                    className="group block rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 transition duration-200 hover:-translate-y-0.5 hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_36px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30 sm:p-5"
+                    className="group block cursor-pointer rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm shadow-slate-950/5 transition-all duration-150 transform-gpu hover:-translate-y-[1px] hover:border-[color:var(--app-accent-border)] hover:bg-[var(--app-panel-soft)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.10)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--app-bg)] dark:shadow-black/20 dark:hover:shadow-[0_12px_28px_rgba(0,0,0,0.35)] sm:p-5"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
