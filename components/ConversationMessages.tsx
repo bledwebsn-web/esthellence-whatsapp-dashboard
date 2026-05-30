@@ -285,8 +285,8 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const bubbleClassName = isInbound
     ? "border-slate-200 bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_18px_rgba(15,23,42,0.08)] dark:border-white/10 dark:from-slate-900 dark:via-slate-900/96 dark:to-slate-800/90 dark:text-slate-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_8px_18px_rgba(0,0,0,0.28)]"
     : isAiMessage
-      ? "border-cyan-200/75 bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_22px_rgba(8,145,178,0.16)] dark:border-cyan-300/15 dark:from-cyan-500/34 dark:via-cyan-600/26 dark:to-cyan-700/22 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_22px_rgba(8,145,178,0.14)]"
-      : "border-cyan-200/70 bg-gradient-to-b from-cyan-200 via-cyan-300 to-cyan-400 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_10px_22px_rgba(8,145,178,0.14)] dark:border-cyan-300/15 dark:from-cyan-500/26 dark:via-cyan-600/20 dark:to-cyan-700/16 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_22px_rgba(8,145,178,0.12)]";
+      ? "border-cyan-200/75 bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-500 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_22px_rgba(8,145,178,0.16)] dark:border-cyan-300/15 dark:from-cyan-600/40 dark:via-cyan-700/32 dark:to-cyan-800/26 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_22px_rgba(8,145,178,0.14)]"
+      : "border-cyan-200/70 bg-gradient-to-b from-cyan-200 via-cyan-300 to-cyan-400 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.48),0_10px_22px_rgba(8,145,178,0.14)] dark:border-cyan-300/15 dark:from-cyan-600/32 dark:via-cyan-700/24 dark:to-cyan-800/18 dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_22px_rgba(8,145,178,0.12)]";
 
   return (
     <div className={`flex ${isInbound ? "justify-start" : "justify-end"}`}>
@@ -298,8 +298,8 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
         <div
           className={`mt-2 flex flex-wrap items-center gap-1.5 text-[11px] ${
             isInbound
-              ? "justify-start text-slate-500 dark:text-slate-400"
-              : "justify-end text-slate-700/90 dark:text-cyan-50/85"
+              ? "justify-start text-slate-500 dark:text-slate-300"
+              : "justify-end text-slate-700 dark:text-white/75"
           }`}
         >
           {isInbound ? (
@@ -316,7 +316,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
                   <span>WABAssist</span>
                 </span>
               ) : null}
-              <span className="text-slate-700/90 dark:text-cyan-50/85">
+              <span className="text-slate-700 dark:text-white/75">
                 {formatDateTime(message.created_at)}
               </span>
               <span className={getWhatsappTickClass(whatsappStatus)}>
