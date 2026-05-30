@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import DashboardQuickLink from "@/components/DashboardQuickLink";
 import GlassIconButton from "@/components/GlassIconButton";
 import ConversationMessages from "@/components/ConversationMessages";
@@ -69,23 +69,87 @@ function formatBoolean(value: boolean | null | undefined) {
   return "—";
 }
 
-function SidebarRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 border-b border-slate-200 dark:border-white/10 py-2 last:border-b-0">
-      <span className="text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
-        {label}
-      </span>
-      <span className="max-w-[170px] text-right text-sm leading-5 text-slate-950 dark:text-white">
-        {value}
-      </span>
-    </div>
-  );
+function formatDateTimeShort(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatStatusLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  const normalized = value.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    new: "Nouveau",
+    nouveau: "Nouveau",
+    en_cours: "En cours",
+    "en cours": "En cours",
+    qualified: "Qualifié",
+    qualifie: "Qualifié",
+    qualifié: "Qualifié",
+    rdv: "RDV",
+    rendez_vous: "RDV",
+    "à_rappeler": "À rappeler",
+    a_rappeler: "À rappeler",
+    perdu: "Perdu",
+    lost: "Perdu",
+  };
+  return labels[normalized] ?? value;
+}
+
+function formatUrgencyLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  const normalized = value.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    high: "Haute",
+    medium: "Moyenne",
+    low: "Faible",
+    normal: "Normale",
+  };
+  return labels[normalized] ?? value;
+}
+
+function formatIntentLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  const normalized = value.trim().toLowerCase();
+  const labels: Record<string, string> = {
+    pricing: "Prix",
+    price: "Prix",
+    schedule: "Dates / horaires",
+    calendar: "Dates / horaires",
+    registration: "Inscription",
+    enrollment: "Inscription",
+    eligibility: "Éligibilité",
+    general_info: "Info générale",
+    general: "Info générale",
+    media_received: "Média reçu",
+    fallback: "À clarifier",
+    unknown: "À clarifier",
+  };
+  return labels[normalized] ?? value;
+}
+
+function formatLastActivity(value: string | null | undefined) {
+  if (!value) return "Dernière activité : —";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Dernière activité : —";
+  const now = new Date();
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const dayLabel = new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+  }).format(date);
+  const timeLabel = new Intl.DateTimeFormat("fr-FR", {
+    timeStyle: "short",
+  }).format(date);
+  return isSameDay
+    ? `Dernière activité aujourd’hui à ${timeLabel}`
+    : `Dernière activité : ${dayLabel} ${timeLabel}`;
 }
 
 function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
@@ -94,10 +158,7 @@ function AutoReplyLogCard({ log }: { log: AutoReplyLog }) {
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-slate-950 dark:text-white">{log.decision}</div>
         <div className="text-[11px] text-slate-600 dark:text-slate-400">
-          {new Intl.DateTimeFormat("fr-FR", {
-            dateStyle: "short",
-            timeStyle: "short",
-          }).format(new Date(log.created_at))}
+          {formatDateTimeShort(log.created_at)}
         </div>
       </div>
       <div className="mt-2 grid gap-1 text-xs text-slate-600 dark:text-slate-400">
@@ -232,6 +293,7 @@ export default async function ConversationDetailPage({
 
   const autoReplyLogs: AutoReplyLog[] = autoReplyLogsResult.rows;
   const autoReplyEnabled = conversation.auto_reply_enabled !== false;
+  const lastActivityAt = conversation.messages.at(-1)?.created_at ?? null;
   const mediaReviewLabel = getMediaReviewLabel(
     conversation.last_inbound_message_type
   );
@@ -292,37 +354,55 @@ export default async function ConversationDetailPage({
         </header>
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
-                              <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] text-[var(--app-fg)] dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 px-4 py-4 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] lg:block xl:w-[320px]">
+          <aside className="hidden w-[300px] shrink-0 overflow-y-auto border-r border-[color:var(--app-border)] bg-[var(--app-sidebar)] px-4 py-4 text-[var(--app-fg)] [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] dark:!border-white/10 dark:!bg-[#050509] dark:!text-slate-100 lg:block xl:w-[320px]">
             <div className="space-y-3">
               <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Lead
                 </div>
-                <div className="space-y-1">
-                  <div className="text-base font-semibold text-slate-950 dark:text-white">
-                    {conversation.contact.profile_name ?? "Contact inconnu"}
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-base font-semibold text-slate-950 dark:text-white">
+                      {conversation.contact.profile_name ?? "Contact inconnu"}
+                    </div>
+                    <div className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
+                      {conversation.contact.phone ?? conversation.contact.wa_id}
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    {conversation.contact.phone ?? conversation.contact.wa_id}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        Messages
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {conversation.messages.length}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        Activité
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {formatLastActivity(lastActivityAt)}
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    className={`mt-2 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                      autoReplyEnabled
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
-                        : "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
-                    }`}
-                  >
-                    {autoReplyEnabled ? "Auto-réponse active" : "Auto-réponse désactivée"}
+                  <div className="flex flex-wrap gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                        autoReplyEnabled
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+                          : "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
+                      }`}
+                    >
+                      {autoReplyEnabled ? "Auto-réponse active" : "Auto-réponse désactivée"}
+                    </span>
+                    {conversation.human_takeover ? (
+                      <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                        Besoin humain
+                      </span>
+                    ) : null}
                   </div>
-                </div>
-              </section>
-
-              <section className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-4 shadow-sm dark:!border-white/10 dark:!bg-white/[0.04] dark:shadow-none">
-                <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
-                  Statut
-                </div>
-                <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 dark:!border-white/10 dark:!bg-slate-900">
-                  <LeadStatusSelect conversationId={conversation.id} currentStatus={conversation.status} />
                 </div>
               </section>
 
@@ -330,11 +410,47 @@ export default async function ConversationDetailPage({
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Qualification
                 </div>
-                <div className="divide-y divide-[color:var(--app-border)] rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 dark:divide-white/10 dark:!border-white/10 dark:!bg-white/[0.03]">
-                  <SidebarRow label="Urgence" value={formatField(conversation.urgency_level ?? "normal")} />
-                  <SidebarRow label="Langue" value={formatField(conversation.detected_language)} />
-                  <SidebarRow label="Intention" value={formatField(conversation.detected_intent)} />
-                  <SidebarRow label="Statut IA" value={formatField(conversation.ai_suggested_status)} />
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 dark:!border-white/10 dark:!bg-slate-900">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                      Statut
+                    </div>
+                    <LeadStatusSelect conversationId={conversation.id} currentStatus={conversation.status} />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        Urgence
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {formatUrgencyLabel(conversation.urgency_level ?? "normal")}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        Intention
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {formatIntentLabel(conversation.detected_intent)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        Langue
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {formatField(conversation.detected_language)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                        IA suggère
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                        {formatStatusLabel(conversation.ai_suggested_status)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -342,7 +458,12 @@ export default async function ConversationDetailPage({
                 <div className="mb-3 text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                   Résumé IA
                 </div>
-                <ConversationSummaryCard conversationId={conversation.id} initialSummary={conversation.ai_summary} embedded showHeader={false} />
+                <ConversationSummaryCard
+                  conversationId={conversation.id}
+                  initialSummary={conversation.ai_summary}
+                  embedded
+                  showHeader={false}
+                />
               </section>
 
               {isMediaReceived && mediaReviewLabel ? (
@@ -373,41 +494,103 @@ export default async function ConversationDetailPage({
 
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <div className="border-b border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 dark:!border-white/10 dark:!bg-white/[0.04] lg:hidden">
-              <details className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
+              <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
                 <summary className="cursor-pointer list-none text-sm font-medium text-slate-950 dark:text-white">
                   Contexte lead
                 </summary>
                 <div className="mt-3 space-y-3">
-                  <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel)] dark:!bg-white/[0.04] p-3">
-                    <LeadStatusSelect
-                      conversationId={conversation.id}
-                      currentStatus={conversation.status}
-                    />
-                  </div>
-                  <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-                    {autoReplyEnabled
-                      ? "Auto-réponse active"
-                      : "Auto-réponse désactivée"}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-400">
-                    <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
-                      <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Urgence</div>
-                      <div className="mt-1 text-slate-950 dark:text-white">
-                        {formatField(conversation.urgency_level ?? "normal")}
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-3 dark:!border-white/10 dark:!bg-white/[0.04]">
+                    <div className="text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
+                      Lead
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                          {conversation.contact.profile_name ?? "Contact inconnu"}
+                        </div>
+                        <div className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+                          {conversation.contact.phone ?? conversation.contact.wa_id}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Messages</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {conversation.messages.length}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Activité</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {formatLastActivity(lastActivityAt)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+                            autoReplyEnabled
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+                              : "border-slate-200 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300"
+                          }`}
+                        >
+                          {autoReplyEnabled ? "Auto-réponse active" : "Auto-réponse désactivée"}
+                        </span>
+                        {conversation.human_takeover ? (
+                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                            Besoin humain
+                          </span>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
-                      <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Langue</div>
-                      <div className="mt-1 text-slate-950 dark:text-white">
-                        {formatField(conversation.detected_language)}
+                  </div>
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-3 dark:!border-white/10 dark:!bg-white/[0.04]">
+                    <div className="text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
+                      Qualification
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-3 dark:!border-white/10 dark:!bg-slate-900">
+                        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
+                          Statut
+                        </div>
+                        <LeadStatusSelect
+                          conversationId={conversation.id}
+                          currentStatus={conversation.status}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Urgence</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {formatUrgencyLabel(conversation.urgency_level ?? "normal")}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Intention</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {formatIntentLabel(conversation.detected_intent)}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">Langue</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {formatField(conversation.detected_language)}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                          <div className="uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">IA suggère</div>
+                          <div className="mt-1 text-sm font-medium text-slate-950 dark:text-white">
+                            {formatStatusLabel(conversation.ai_suggested_status)}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2 text-sm">
+                  <div className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel)] p-3 dark:!border-white/10 dark:!bg-white/[0.04]">
                     <div className="text-[11px] font-semibold tracking-[0.08em] text-slate-700 dark:text-slate-200">
                       Résumé IA
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-3">
                       <ConversationSummaryCard
                         conversationId={conversation.id}
                         initialSummary={conversation.ai_summary}
@@ -416,13 +599,21 @@ export default async function ConversationDetailPage({
                       />
                     </div>
                   </div>
-                  <details className="rounded-xl border border-[color:var(--app-border)] dark:!border-white/10 bg-[var(--app-panel-soft)] dark:!bg-white/[0.03] px-3 py-2">
-                    <summary className="cursor-pointer list-none text-sm text-slate-950 dark:text-white">
+                  {isMediaReceived && mediaReviewLabel ? (
+                    <section className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-slate-950 dark:border-amber-400/20 dark:bg-[var(--app-warning-bg)] dark:text-slate-100">
+                      <div className="text-[11px] font-semibold tracking-[0.08em] text-amber-700 dark:text-amber-200">
+                        Média reçu
+                      </div>
+                      <div className="mt-1 leading-6">{mediaReviewLabel}</div>
+                    </section>
+                  ) : null}
+                  <details className="rounded-xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-3 py-2 dark:!border-white/10 dark:!bg-white/[0.03]">
+                    <summary className="cursor-pointer list-none text-sm font-medium text-slate-950 dark:text-white">
                       Décisions IA récentes
                     </summary>
                     <div className="mt-3 space-y-2">
                       {autoReplyLogs.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-[color:var(--app-border)] dark:border-white/10 px-3 py-4 text-sm text-slate-600 dark:text-slate-400">
+                        <div className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-4 text-sm text-slate-600 dark:border-white/10 dark:text-slate-400">
                           Aucune décision auto-réponse pour le moment.
                         </div>
                       ) : (
