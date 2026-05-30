@@ -403,9 +403,16 @@ function ConversationCard({
                 </span>
               ) : null}
             </div>
-            <div className="mt-1 text-[11px] leading-5 text-[color:var(--app-muted)] sm:text-xs">
-              {conversation.phone ?? conversation.wa_id} ? {conversation.message_count ?? 0} messages
-              {conversation.detected_language ? ` ? ${conversation.detected_language}` : ""}
+            <div className="mt-1 flex flex-wrap items-center gap-0 text-[11px] leading-5 text-[color:var(--app-muted)] sm:text-xs">
+              <span className="truncate">{conversation.phone ?? conversation.wa_id ?? "Numéro non disponible"}</span>
+              <span aria-hidden="true" className="mx-2 select-none text-slate-400 dark:text-slate-500">
+                |
+              </span>
+              <span>{`${conversation.message_count ?? 0} message${(conversation.message_count ?? 0) === 1 ? "" : "s"}`}</span>
+              <span aria-hidden="true" className="mx-2 select-none text-slate-400 dark:text-slate-500">
+                |
+              </span>
+              <span>{conversation.detected_language?.trim() || "Langue inconnue"}</span>
             </div>
           </div>
         </div>
