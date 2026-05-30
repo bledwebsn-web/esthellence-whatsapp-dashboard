@@ -7,16 +7,31 @@ declare global {
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL is missing");
+function createMissingDbProxy(): Pool {
+  return new Proxy({} as Pool, {
+    get(_target, property) {
+      if (property === "then") {
+        return undefined;
+      }
+
+      if (property === "toString") {
+        return () => "[missing pg pool]";
+      }
+
+      return () => {
+        throw new Error("DATABASE_URL is missing");
+      };
+    },
+  });
 }
 
-export const db =
-  global.pgPool ??
-  new Pool({
-    connectionString,
-  });
+export const db = connectionString
+  ? global.pgPool ??
+    new Pool({
+      connectionString,
+    })
+  : createMissingDbProxy();
 
-if (process.env.NODE_ENV !== "production") {
+if (connectionString && process.env.NODE_ENV !== "production") {
   global.pgPool = db;
 }
