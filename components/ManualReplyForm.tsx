@@ -798,29 +798,29 @@ export default function ManualReplyForm({
   }
 
   const selectedFileDisplay = selectedFile ? (
-    <div className="mb-2 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 shadow-sm">
-      <div className="flex items-start gap-3">
+    <div className="mb-2 rounded-[24px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] p-2 shadow-sm shadow-slate-950/5 transition-colors duration-200 focus-within:border-cyan-400/30 focus-within:shadow-slate-950/10 dark:bg-[var(--app-panel)] dark:shadow-black/10">
+      <div className="flex items-start gap-2.5">
         {selectedFileKind === "image" && selectedFilePreviewUrl ? (
           <a
             href={selectedFilePreviewUrl}
             target="_blank"
             rel="noreferrer"
-            className="block shrink-0 overflow-hidden rounded-xl"
+            className="block shrink-0 overflow-hidden rounded-[18px] border border-[var(--app-border)]"
           >
             <img
               src={selectedFilePreviewUrl}
               alt={selectedFile.name}
-              className="h-14 w-14 rounded-xl object-cover"
+              className="h-[52px] w-[52px] object-cover"
             />
           </a>
         ) : selectedFileKind === "video" && selectedFilePreviewUrl ? (
           <video
             src={selectedFilePreviewUrl}
             controls
-            className="h-16 w-24 shrink-0 rounded-xl object-cover"
+            className="h-14 w-24 shrink-0 rounded-[18px] border border-[var(--app-border)] object-cover"
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[11px] font-semibold text-[var(--app-fg)]">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-[var(--app-border)] bg-[var(--app-panel-soft)] text-[11px] font-semibold text-[var(--app-fg)]">
             {selectedFileBadge}
           </div>
         )}
@@ -828,7 +828,7 @@ export default function ManualReplyForm({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-[var(--app-fg)]">
+              <div className="truncate text-[13px] font-semibold text-[var(--app-fg)] sm:text-sm">
                 {selectedFile.name}
               </div>
               <div className="text-[11px] text-[var(--app-muted)]">
@@ -842,7 +842,7 @@ export default function ManualReplyForm({
               aria-label="Retirer le fichier"
               onClick={clearSelectedFile}
               disabled={loading || recording || toggleLoading}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] transition hover:bg-[var(--app-panel)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -864,7 +864,7 @@ export default function ManualReplyForm({
           ) : null}
 
           {selectedFileKind === "document" ? (
-            <div className="mt-2 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-[var(--app-muted)]">
+            <div className="mt-2 inline-flex items-center rounded-full border border-[var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-muted)]">
               {selectedFileBadge}
             </div>
           ) : null}
@@ -879,7 +879,7 @@ export default function ManualReplyForm({
         hasText || hasAttachment ? "sm:max-w-[920px]" : "sm:max-w-[680px]"
       }`}
     >
-      <div className="rounded-[28px] border border-white/10 bg-white/[0.07] px-2.5 py-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:bg-white/[0.07]">
+      <div className="rounded-[24px] border border-[var(--app-border)] bg-[var(--app-panel-strong)] px-2 py-1.5 shadow-sm shadow-slate-950/5 backdrop-blur-md transition-colors duration-200 dark:bg-[var(--app-panel)] dark:shadow-black/10">
         {selectedFileDisplay}
 
         <div className="flex items-end gap-2">
@@ -895,7 +895,7 @@ export default function ManualReplyForm({
             type="button"
             aria-label="Ajouter un fichier"
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-[var(--app-fg)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] transition hover:bg-[var(--app-panel)] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading || recording || toggleLoading}
           >
             <svg
@@ -921,7 +921,7 @@ export default function ManualReplyForm({
               rows={1}
               placeholder={placeholder}
               disabled={loading || recording || toggleLoading}
-              className="min-h-[40px] max-h-[96px] w-full resize-none border-0 bg-transparent px-1 py-2 text-sm leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none"
+              className="min-h-[42px] max-h-[120px] w-full resize-none border-0 bg-transparent px-1 py-[10px] text-[15px] leading-6 text-[var(--app-fg)] placeholder:text-[var(--app-muted)] outline-none transition placeholder:opacity-100"
             />
           </div>
 
@@ -933,7 +933,7 @@ export default function ManualReplyForm({
                 void (selectedFile ? sendMediaFile(selectedFile) : handleTextSubmit())
               }
               disabled={loading || !canSend}
-              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/10 bg-white/10 text-[var(--app-fg)] shadow-[0_10px_28px_rgba(0,0,0,0.18)] transition hover:scale-105 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-[var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] transition hover:bg-[var(--app-panel)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -965,7 +965,7 @@ export default function ManualReplyForm({
                 className={`inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   recording
                     ? "border-rose-400/35 bg-rose-400/10 text-rose-200 animate-pulse"
-                    : "border-white/10 bg-white/5 text-[var(--app-fg)] hover:bg-white/10"
+                    : "border-[var(--app-border)] bg-[var(--app-panel-soft)] text-[var(--app-fg)] hover:bg-[var(--app-panel)]"
                 }`}
               >
                 {recording ? (
@@ -995,8 +995,8 @@ export default function ManualReplyForm({
                 disabled={toggleLoading}
                 className={`inline-flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-full border p-0 transition disabled:cursor-not-allowed disabled:opacity-70 ${
                   aiEnabled
-                    ? "border-emerald-400/40 bg-white/5 shadow-[0_0_0_1px_rgba(74,222,128,0.08)]"
-                    : "border-white/10 bg-white/5"
+                    ? "border-emerald-400/40 bg-[var(--app-panel-soft)]"
+                    : "border-[var(--app-border)] bg-[var(--app-panel-soft)]"
                 }`}
               >
                 <img
