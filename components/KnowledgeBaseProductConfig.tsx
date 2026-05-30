@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
@@ -8,8 +8,13 @@ type ProductSource = {
   source_type: "text" | "url" | "file" | string;
   source_url: string | null;
   file_url: string | null;
+  file_name: string | null;
+  file_mime_type: string | null;
+  file_size: number | null;
   raw_text: string | null;
   status: "draft" | "processed" | "archived" | string;
+  extraction_status: "none" | "extracted" | "failed" | string;
+  extraction_error: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -52,7 +57,7 @@ type ProfileDraft = {
 const SOURCE_TYPE_OPTIONS: Array<{ value: SourceDraft["source_type"]; label: string }> = [
   { value: "text", label: "Texte" },
   { value: "url", label: "Lien" },
-  { value: "file", label: "Fichier" },
+  { value: "file", label: "Document" },
 ];
 
 const SOURCE_STATUS_OPTIONS: Array<{ value: SourceDraft["status"]; label: string }> = [
@@ -169,7 +174,7 @@ function normalizeMultiline(value: string) {
 
 function getSourceTypeLabel(type: string) {
   if (type === "url") return "Lien";
-  if (type === "file") return "Fichier";
+  if (type === "file") return "Document";
   return "Texte";
 }
 
@@ -197,6 +202,24 @@ function getTextPreview(value: string | null, fallback: string) {
     return fallback;
   }
   return text;
+}
+
+function formatFileSize(value: number | null) {
+  if (!value || value <= 0) {
+    return "Taille inconnue";
+  }
+
+  if (value < 1024) {
+    return `${value} o`;
+  }
+
+  const kilobytes = value / 1024;
+  if (kilobytes < 1024) {
+    return `${kilobytes.toFixed(kilobytes < 10 ? 1 : 0)} Ko`;
+  }
+
+  const megabytes = kilobytes / 1024;
+  return `${megabytes.toFixed(megabytes < 10 ? 1 : 0)} Mo`;
 }
 
 function sectionCardClass() {
@@ -266,6 +289,9 @@ function SourceEditor({
   onCancel,
   loading,
   submitLabel,
+  selectedFile,
+  onFileChange,
+  allowFileUpload = false,
 }: {
   value: SourceDraft;
   onChange: (next: SourceDraft) => void;
@@ -273,6 +299,9 @@ function SourceEditor({
   onCancel?: () => void;
   loading: boolean;
   submitLabel: string;
+  selectedFile?: File | null;
+  onFileChange?: (next: File | null) => void;
+  allowFileUpload?: boolean;
 }) {
   return (
     <form onSubmit={onSubmit} className="grid gap-3">
@@ -357,9 +386,35 @@ function SourceEditor({
       ) : null}
 
       {value.source_type === "file" ? (
-        <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-5 text-sm text-[var(--app-muted)]">
-          Upload fichier à venir. Le fichier sera pris en charge dans un prochain sprint.
-        </div>
+        allowFileUpload ? (
+          <label className="grid gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--app-muted)]">
+              Document
+            </span>
+            <div className="grid gap-3 rounded-2xl border border-dashed border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4">
+              <input
+                type="file"
+                accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(event) => onFileChange?.(event.target.files?.[0] ?? null)}
+                className="w-full text-sm text-[var(--app-muted)] file:mr-4 file:rounded-full file:border-0 file:bg-[var(--app-fg)] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[var(--app-bg)]"
+              />
+              <p className="text-sm leading-6 text-[var(--app-muted)]">
+                Formats supportés : PDF, TXT ou DOCX. Le texte extrait sera enregistré dans la source produit.
+              </p>
+              {selectedFile ? (
+                <p className="text-sm text-[var(--app-fg)]">
+                  Fichier sélectionné : <span className="font-medium">{selectedFile.name}</span>
+                </p>
+              ) : (
+                <p className="text-sm text-[var(--app-muted)]">Aucun fichier sélectionné.</p>
+              )}
+            </div>
+          </label>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-4 py-5 text-sm text-[var(--app-muted)]">
+            Document déjà importé. Vous pouvez modifier le titre ou le statut, mais pas remplacer le fichier depuis cette vue.
+          </div>
+        )
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
@@ -559,6 +614,8 @@ function SourceCard({
   onSave,
   onCancel,
   loading,
+  selectedFile,
+  onFileChange,
 }: {
   source: ProductSource;
   onEdit: () => void;
@@ -569,14 +626,26 @@ function SourceCard({
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
   loading: boolean;
+  selectedFile?: File | null;
+  onFileChange?: (next: File | null) => void;
 }) {
   const title = source.title.trim();
   const preview =
     source.source_type === "file"
-      ? "Upload fichier à venir"
+      ? source.extraction_status === "failed"
+        ? source.extraction_error || "Impossible d’extraire le texte du document."
+        : getTextPreview(source.raw_text, "Texte extrait manquant")
       : source.source_type === "url"
         ? getTextPreview(source.source_url, "Lien non renseigné")
         : getTextPreview(source.raw_text, "Informations produit manquantes");
+  const extractionStatus =
+    source.source_type === "file"
+      ? source.extraction_status === "extracted"
+        ? "Texte extrait"
+        : source.extraction_status === "failed"
+          ? "Échec extraction"
+          : "Extraction en attente"
+      : null;
 
   return (
     <article className="rounded-3xl border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] p-4 shadow-sm transition-all duration-150 hover:-translate-y-[1px] hover:border-[color:var(--app-accent-border)] hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)] dark:hover:shadow-[0_12px_28px_rgba(0,0,0,0.30)]">
@@ -590,6 +659,11 @@ function SourceCard({
             <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getStatusClass(source.status)}`}>
               {getSourceStatusLabel(source.status)}
             </span>
+            {extractionStatus ? (
+              <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-muted)]">
+                {extractionStatus}
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-2 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm leading-6 text-[var(--app-fg)]">
@@ -604,6 +678,25 @@ function SourceCard({
           {source.source_type === "url" && source.raw_text ? (
             <div className="mt-3 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm leading-6 text-[var(--app-muted)]">
               {source.raw_text}
+            </div>
+          ) : null}
+
+          {source.source_type === "file" ? (
+            <div className="mt-3 grid gap-2 rounded-[22px] border border-[color:var(--app-border)] bg-[var(--app-panel)] px-4 py-3 text-sm leading-6 text-[var(--app-muted)]">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
+                  {source.file_name || "Document"}
+                </span>
+                <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
+                  {formatFileSize(source.file_size)}
+                </span>
+                {source.file_mime_type ? (
+                  <span className="rounded-full border border-[color:var(--app-border)] bg-[var(--app-panel-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--app-fg)]">
+                    {source.file_mime_type}
+                  </span>
+                ) : null}
+              </div>
+              <div className="text-sm leading-6 text-[var(--app-fg)]">{preview}</div>
             </div>
           ) : null}
         </div>
@@ -648,6 +741,9 @@ function SourceCard({
             onCancel={onCancel}
             loading={loading}
             submitLabel="Enregistrer"
+            selectedFile={selectedFile}
+            onFileChange={onFileChange}
+            allowFileUpload={false}
           />
         </div>
       ) : null}
@@ -791,6 +887,7 @@ export default function KnowledgeBaseProductConfig() {
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [sourceDraft, setSourceDraft] = useState<SourceDraft>(sourceInitialState());
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [profileDraft, setProfileDraft] = useState<ProfileDraft>(profileInitialState());
 
   useEffect(() => {
@@ -877,6 +974,7 @@ export default function KnowledgeBaseProductConfig() {
 
   function resetSourceDraft() {
     setSourceDraft(sourceInitialState());
+    setSourceFile(null);
   }
 
   function resetProfileDraft() {
@@ -885,6 +983,7 @@ export default function KnowledgeBaseProductConfig() {
 
   function startSourceEdit(source: ProductSource) {
     setEditingSourceId(source.id);
+    setSourceFile(null);
     setSourceDraft({
       title: source.title,
       source_type: (source.source_type as SourceDraft["source_type"]) || "text",
@@ -919,11 +1018,8 @@ export default function KnowledgeBaseProductConfig() {
     const sourceType = sourceDraft.source_type;
     const sourceUrl = normalizeText(sourceDraft.source_url);
     const rawText = normalizeMultiline(sourceDraft.raw_text);
-
-    if (!title) {
-      setSourceError("Le titre de la source est obligatoire.");
-      return;
-    }
+    const hasExistingSource = Boolean(editingSourceId);
+    const resolvedTitle = title || sourceFile?.name || "";
 
     if (sourceType === "url" && !sourceUrl) {
       setSourceError("L’URL est obligatoire pour une source de type lien.");
@@ -935,25 +1031,54 @@ export default function KnowledgeBaseProductConfig() {
       return;
     }
 
+    if (sourceType === "file") {
+      if (!hasExistingSource && !sourceFile) {
+        setSourceError("Choisissez un document PDF, TXT ou DOCX.");
+        return;
+      }
+
+      if (!resolvedTitle) {
+        setSourceError("Le titre de la source est requis.");
+        return;
+      }
+    } else if (!title) {
+      setSourceError("Le titre de la source est obligatoire.");
+      return;
+    }
+
     setSavingSource(true);
     setSourceError(null);
     setSourceMessage(null);
 
     try {
-      const response = await fetch(
-        editingSourceId ? `/api/knowledge-base/product-sources/${editingSourceId}` : "/api/knowledge-base/product-sources",
-        {
-          method: editingSourceId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            source_type: sourceType,
-            source_url: sourceType === "url" ? sourceUrl : sourceDraft.source_url,
-            raw_text: sourceType === "file" ? "" : rawText,
-            status: sourceDraft.status,
-          }),
-        }
-      );
+      let response: Response;
+
+      if (sourceType === "file" && !hasExistingSource) {
+        const formData = new FormData();
+        formData.set("file", sourceFile as File);
+        formData.set("title", resolvedTitle || "");
+        response = await fetch("/api/knowledge-base/product-sources/upload", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        response = await fetch(
+          hasExistingSource
+            ? `/api/knowledge-base/product-sources/${editingSourceId}`
+            : "/api/knowledge-base/product-sources",
+          {
+            method: hasExistingSource ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: sourceType === "file" ? resolvedTitle || title : title,
+              source_type: sourceType,
+              source_url: sourceType === "url" ? sourceUrl : sourceDraft.source_url,
+              raw_text: sourceType === "file" ? undefined : rawText,
+              status: sourceDraft.status,
+            }),
+          }
+        );
+      }
 
       const raw = await response.text();
       const data = raw ? parseJsonResponse<Record<string, unknown>>(raw) : {};
@@ -969,7 +1094,16 @@ export default function KnowledgeBaseProductConfig() {
         await reloadData();
       }
 
-      setSourceMessage(editingSourceId ? "Source mise à jour." : "Source enregistrée.");
+      const uploadWarning = typeof data.warning === "string" ? data.warning : null;
+      setSourceMessage(
+        uploadWarning
+          ? uploadWarning
+          : sourceType === "file" && !hasExistingSource
+            ? "Document importé et texte extrait."
+          : hasExistingSource
+            ? "Source mise à jour."
+            : "Source enregistrée."
+      );
       setSourceOpen(false);
       setEditingSourceId(null);
       resetSourceDraft();
@@ -1170,7 +1304,18 @@ export default function KnowledgeBaseProductConfig() {
                 onChange={setSourceDraft}
                 onSubmit={handleSourceSubmit}
                 loading={savingSource}
-                submitLabel={editingSourceId ? "Enregistrer" : "Sauvegarder"}
+                submitLabel={
+                  sourceDraft.source_type === "file"
+                    ? editingSourceId
+                      ? "Enregistrer"
+                      : "Importer le document"
+                    : editingSourceId
+                      ? "Enregistrer"
+                      : "Sauvegarder"
+                }
+                selectedFile={sourceFile}
+                onFileChange={setSourceFile}
+                allowFileUpload={!editingSourceId}
               />
               {sourceMessage ? <p className="mt-3 text-sm text-emerald-400">{sourceMessage}</p> : null}
               {sourceError ? <p className="mt-3 text-sm text-rose-400">{sourceError}</p> : null}
@@ -1204,6 +1349,8 @@ export default function KnowledgeBaseProductConfig() {
                       resetSourceDraft();
                     }}
                     loading={savingSource}
+                    selectedFile={sourceFile}
+                    onFileChange={setSourceFile}
                   />
                 );
               })

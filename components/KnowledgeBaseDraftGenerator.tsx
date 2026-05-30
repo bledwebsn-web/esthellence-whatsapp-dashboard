@@ -6,6 +6,9 @@ type ProductSource = {
   id: string;
   title: string;
   source_type: string;
+  raw_text: string | null;
+  extraction_status?: string | null;
+  extraction_error?: string | null;
 };
 
 type SalesProfile = {
@@ -121,6 +124,12 @@ function normalizeText(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function getSourceTypeLabel(type: string) {
+  if (type === "url") return "Lien";
+  if (type === "file") return "Document";
+  return "Texte";
+}
+
 function countApproved(items: DraftItem[]) {
   return items.filter((item) => Boolean(item.approved || item.knowledge_base_id)).length;
 }
@@ -213,6 +222,12 @@ export default function KnowledgeBaseDraftGenerator() {
   }, []);
 
   const latestRun = useMemo(() => runs[0] ?? null, [runs]);
+  const selectedSource = useMemo(
+    () => sources.find((source) => source.id === sourceId) ?? null,
+    [sources, sourceId]
+  );
+  const sourceHasText = Boolean(normalizeText(String(selectedSource?.raw_text ?? "")));
+  const sourceNeedsText = selectedSource?.source_type === "file" && !sourceHasText;
   const approvedCount = useMemo(() => countApproved(draftItems), [draftItems]);
 
   useEffect(() => {
@@ -230,6 +245,11 @@ export default function KnowledgeBaseDraftGenerator() {
 
     if (!sourceId || !profileId) {
       setError("Sélectionnez une source et un profil commercial.");
+      return;
+    }
+
+    if (sourceNeedsText) {
+      setError("Cette source ne contient pas encore de texte exploitable.");
       return;
     }
 
@@ -415,7 +435,7 @@ export default function KnowledgeBaseDraftGenerator() {
               <option value="">Sélectionner une source</option>
               {sources.map((source) => (
                 <option key={source.id} value={source.id}>
-                  {source.title} | {source.source_type}
+                  {source.title} | {getSourceTypeLabel(source.source_type)}
                 </option>
               ))}
             </select>
@@ -460,7 +480,7 @@ export default function KnowledgeBaseDraftGenerator() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={loading || !sourceId || !profileId}
+            disabled={loading || !sourceId || !profileId || sourceNeedsText}
             className="inline-flex items-center rounded-full bg-[var(--app-fg)] px-4 py-2 text-sm font-medium text-[var(--app-bg)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Génération en cours..." : "Générer des brouillons"}
@@ -469,6 +489,11 @@ export default function KnowledgeBaseDraftGenerator() {
             Sélectionnez une source et un profil, puis lancez la génération.
           </span>
         </div>
+        {sourceNeedsText ? (
+          <p className="text-sm text-amber-500 dark:text-amber-300">
+            Cette source ne contient pas encore de texte exploitable.
+          </p>
+        ) : null}
       </form>
 
       {message ? <p className="mt-3 text-sm text-emerald-400">{message}</p> : null}

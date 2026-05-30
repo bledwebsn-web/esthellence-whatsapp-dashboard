@@ -38,8 +38,13 @@ export async function GET() {
         source_type,
         source_url,
         file_url,
+        file_name,
+        file_mime_type,
+        file_size,
         raw_text,
         status,
+        extraction_status,
+        extraction_error,
         created_at,
         updated_at
       from product_sources
@@ -69,6 +74,12 @@ export async function POST(request: Request) {
     const sourceUrl = normalizeString(body.source_url);
     const rawText = normalizeString(body.raw_text);
     const status = normalizeString(body.status) || "draft";
+    const fileName = normalizeString(body.file_name);
+    const fileMimeType = normalizeString(body.file_mime_type);
+    const fileSizeValue = Number(body.file_size);
+    const fileSize = Number.isFinite(fileSizeValue) ? Math.max(0, Math.trunc(fileSizeValue)) : null;
+    const extractionStatus = normalizeString(body.extraction_status) || "none";
+    const extractionError = normalizeString(body.extraction_error);
 
     if (!title || !isValidSourceType(sourceType) || !isValidSourceStatus(status)) {
       return errorResponse("Impossible de créer la source produit.", 400);
@@ -89,10 +100,15 @@ export async function POST(request: Request) {
         title,
         source_type,
         source_url,
+        file_name,
+        file_mime_type,
+        file_size,
         raw_text,
-        status
+        status,
+        extraction_status,
+        extraction_error
       )
-      values ($1, $2, $3, nullif($4, ''), nullif($5, ''), $6)
+      values ($1, $2, $3, nullif($4, ''), nullif($5, ''), nullif($6, ''), $7, nullif($8, ''), $9, nullif($10, ''), nullif($11, ''))
       returning
         id,
         client_id,
@@ -100,12 +116,29 @@ export async function POST(request: Request) {
         source_type,
         source_url,
         file_url,
+        file_name,
+        file_mime_type,
+        file_size,
         raw_text,
         status,
+        extraction_status,
+        extraction_error,
         created_at,
         updated_at
       `,
-      [clientId, title, sourceType, sourceUrl, rawText, status]
+      [
+        clientId,
+        title,
+        sourceType,
+        sourceUrl,
+        fileName,
+        fileMimeType,
+        fileSize,
+        rawText,
+        status,
+        extractionStatus,
+        extractionError,
+      ]
     );
 
     return Response.json({

@@ -7,8 +7,13 @@ export type ProductSourceRow = {
   source_type: string;
   source_url: string | null;
   file_url: string | null;
+  file_name: string | null;
+  file_mime_type: string | null;
+  file_size: number | null;
   raw_text: string | null;
   status: string;
+  extraction_status: string | null;
+  extraction_error: string | null;
   created_at: string;
   updated_at: string | null;
 };
@@ -75,11 +80,41 @@ export async function ensureProductConfigTables() {
       source_type text not null default 'text',
       source_url text null,
       file_url text null,
+      file_name text null,
+      file_mime_type text null,
+      file_size integer null,
       raw_text text null,
       status text not null default 'draft',
+      extraction_status text not null default 'none',
+      extraction_error text null,
       created_at timestamptz default now(),
       updated_at timestamptz default now()
     )
+  `);
+
+  await db.query(`
+    alter table product_sources
+    add column if not exists file_name text null
+  `);
+
+  await db.query(`
+    alter table product_sources
+    add column if not exists file_mime_type text null
+  `);
+
+  await db.query(`
+    alter table product_sources
+    add column if not exists file_size integer null
+  `);
+
+  await db.query(`
+    alter table product_sources
+    add column if not exists extraction_status text not null default 'none'
+  `);
+
+  await db.query(`
+    alter table product_sources
+    add column if not exists extraction_error text null
   `);
 
   await db.query(`
@@ -138,8 +173,13 @@ export function mapSourceRow(row: ProductSourceRow) {
     source_type: row.source_type,
     source_url: row.source_url,
     file_url: row.file_url,
+    file_name: row.file_name,
+    file_mime_type: row.file_mime_type,
+    file_size: row.file_size,
     raw_text: row.raw_text,
     status: row.status,
+    extraction_status: row.extraction_status ?? "none",
+    extraction_error: row.extraction_error,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

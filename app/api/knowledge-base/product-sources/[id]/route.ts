@@ -61,6 +61,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       fields.push(`source_url = ${add(normalizeString(body.source_url) || null)}`);
     }
 
+    if (Object.prototype.hasOwnProperty.call(body, "file_name")) {
+      fields.push(`file_name = ${add(normalizeString(body.file_name) || null)}`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "file_mime_type")) {
+      fields.push(`file_mime_type = ${add(normalizeString(body.file_mime_type) || null)}`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "file_size")) {
+      const nextFileSize = Number(body.file_size);
+      fields.push(`file_size = ${add(Number.isFinite(nextFileSize) ? Math.max(0, Math.trunc(nextFileSize)) : null)}`);
+    }
+
     if (Object.prototype.hasOwnProperty.call(body, "raw_text")) {
       fields.push(`raw_text = ${add(normalizeString(body.raw_text) || null)}`);
     }
@@ -71,6 +84,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return errorResponse("Le statut de la source est invalide.", 400);
       }
       fields.push(`status = ${add(nextStatus)}`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "extraction_status")) {
+      fields.push(`extraction_status = ${add(normalizeString(body.extraction_status) || "none")}`);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, "extraction_error")) {
+      fields.push(`extraction_error = ${add(normalizeString(body.extraction_error) || null)}`);
     }
 
     if (!fields.length) {
@@ -97,8 +118,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         source_type,
         source_url,
         file_url,
+        file_name,
+        file_mime_type,
+        file_size,
         raw_text,
         status,
+        extraction_status,
+        extraction_error,
         created_at,
         updated_at
       `,
