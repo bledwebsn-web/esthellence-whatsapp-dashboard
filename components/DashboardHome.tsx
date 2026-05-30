@@ -379,39 +379,37 @@ function ConversationCard({
   const lastMessage = getLastMessageLabel(conversation);
 
   return (
-    <article className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-3 transition hover:bg-[color:var(--app-panel-strong)] sm:p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <h3 className="truncate text-sm font-semibold text-[color:var(--app-fg)] sm:text-[15px]">
-              {conversation.profile_name ?? conversation.phone ?? conversation.wa_id}
-            </h3>
-            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(conversation.status)}`}>
-              {conversation.status || "nouveau"}
-            </span>
-            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getUrgencyBadgeClass(conversation.urgency_level)}`}>
-              Urgence {getUrgencyLabel(conversation.urgency_level)}
-            </span>
-            {treatment.needsHuman ? (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-                Humain requis
+    <Link
+      href={`/conversations/${conversation.conversation_id}`}
+      className="group block rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel-soft)] p-3 text-left transition hover:border-[color:var(--app-fg)]/15 hover:bg-[color:var(--app-panel-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30 sm:p-3.5"
+      aria-label={`Ouvrir la conversation de ${conversation.profile_name ?? conversation.phone ?? conversation.wa_id}`}
+    >
+      <article className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h3 className="truncate text-sm font-semibold text-[color:var(--app-fg)] sm:text-[15px]">
+                {conversation.profile_name ?? conversation.phone ?? conversation.wa_id}
+              </h3>
+              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusBadgeClass(conversation.status)}`}>
+                {conversation.status || "nouveau"}
               </span>
-            ) : null}
-          </div>
-          <div className="mt-1 text-[11px] leading-5 text-[color:var(--app-muted)] sm:text-xs">
-            {conversation.phone ?? conversation.wa_id} ? {conversation.message_count ?? 0} messages
-            {conversation.detected_language ? ` ? ${conversation.detected_language}` : ""}
+              <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getUrgencyBadgeClass(conversation.urgency_level)}`}>
+                Urgence {getUrgencyLabel(conversation.urgency_level)}
+              </span>
+              {treatment.needsHuman ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                  Besoin humain
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-1 text-[11px] leading-5 text-[color:var(--app-muted)] sm:text-xs">
+              {conversation.phone ?? conversation.wa_id} ? {conversation.message_count ?? 0} messages
+              {conversation.detected_language ? ` ? ${conversation.detected_language}` : ""}
+            </div>
           </div>
         </div>
-        <Link
-          href={`/conversations/${conversation.conversation_id}`}
-          className="inline-flex shrink-0 items-center rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-3 py-1.5 text-[11px] font-medium text-[color:var(--app-fg)] transition hover:bg-[color:var(--app-panel-strong)] sm:text-xs"
-        >
-          Ouvrir
-        </Link>
-      </div>
 
-      <div className="mt-3 space-y-2">
         <div className="rounded-2xl border border-[color:var(--app-border)] bg-[color:var(--app-panel)] p-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--app-muted)]">
             Dernier message
@@ -426,11 +424,11 @@ function ConversationCard({
             </span>
             {treatment.autoReplyActive ? (
               <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-                Auto-r?ponse active
+                Auto-réponse active
               </span>
             ) : (
               <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300">
-                Auto-r?ponse d?sactiv?e
+                Auto-réponse désactivée
               </span>
             )}
             <span className="rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-panel)] px-2 py-0.5 font-medium text-[color:var(--app-muted)]">
@@ -438,10 +436,11 @@ function ConversationCard({
             </span>
           </div>
         ) : null}
-      </div>
-    </article>
+      </article>
+    </Link>
   );
 }
+
 
 function SectionEmptyState({ title, description }: { title: string; description: string }) {
   return (
